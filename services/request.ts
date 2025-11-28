@@ -10,9 +10,17 @@ export async function request(method: string, input: RequestInfo | URL, init?: R
   const { timeout = DEFAULT_TIMEOUT, signal, headers: initHeaders, ...rest } = init || {}
   const controller = new AbortController()
   const finalSignal = signal ?? controller.signal
-  const headers = new Headers({
+  const defaultHeaders: Record<string, string> = {
     accept: 'application/json',
-    'Content-Type': 'application/json',
+  }
+
+  // Only add Content-Type for requests with body
+  if (rest.body) {
+    defaultHeaders['Content-Type'] = 'application/json'
+  }
+
+  const headers = new Headers({
+    ...defaultHeaders,
     ...Object.fromEntries(new Headers(initHeaders || {}).entries()),
   })
 

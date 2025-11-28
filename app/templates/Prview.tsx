@@ -36,7 +36,7 @@ export function Prview({ templates }: TemplatePreviewerProps) {
 
   const { previewSrc, jsonError, variables }: ParseResult = useMemo(() => {
     if (!selectedId) {
-      return { previewSrc: '', jsonError: '未选择模板', variables: null }
+      return { previewSrc: '', jsonError: 'No template selected', variables: null }
     }
 
     try {
@@ -57,12 +57,12 @@ export function Prview({ templates }: TemplatePreviewerProps) {
   const handleSendTest = async () => {
     if (!currentTemplate) {
       setSendStatus('error')
-      setSendMessage('未找到模板')
+      setSendMessage('Template not found')
       return
     }
     if (jsonError) {
       setSendStatus('error')
-      setSendMessage('请先修正变量 JSON')
+      setSendMessage('Please fix the variables JSON first')
       return
     }
 
@@ -83,11 +83,11 @@ export function Prview({ templates }: TemplatePreviewerProps) {
 
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.message || '发送失败')
+        throw new Error(data.message || 'Failed to send email')
       }
 
       setSendStatus('success')
-      setSendMessage('测试邮件已发送')
+      setSendMessage('Test email sent successfully')
     } catch (error) {
       setSendStatus('error')
       setSendMessage((error as Error).message)

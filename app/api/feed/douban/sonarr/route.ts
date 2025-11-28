@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server'
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, jsonSuccess } from '@/initializer/response'
 import { type DoubanRSSDTO, extractSeriesListFromDoubanRSSDTO } from '@/services/douban'
+import { ensureAuthorized } from '@/utils/webhooks/auth'
 
 const RSS_HEADERS = {
   accept: 'application/xhtml+xml,application/xml;',
@@ -13,6 +14,8 @@ const RSS_HEADERS = {
 export const runtime = 'nodejs'
 
 export const GET = api(async (req: NextRequest) => {
+  ensureAuthorized(req)
+
   const { searchParams } = new URL(req.url)
   const url = searchParams.get('url')
 

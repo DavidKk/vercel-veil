@@ -40,27 +40,27 @@ export function TemplateToolbar({
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <label className="block text-sm font-semibold text-gray-900">选择模板</label>
-        <SearchableSelect value={selectedId} options={templateOptions} onChange={(value) => onSelect(value as string)} placeholder="选择模板..." size="sm" />
+        <label className="block text-sm font-semibold text-gray-900">Select Template</label>
+        <SearchableSelect value={selectedId} options={templateOptions} onChange={(value) => onSelect(value as string)} placeholder="Select template..." size="sm" />
         {currentTemplate?.description ? <p className="text-xs text-gray-600">{currentTemplate.description}</p> : null}
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-semibold text-gray-900">变量 JSON</label>
+          <label className="block text-sm font-semibold text-gray-900">Variables JSON</label>
           {jsonError ? <span className="text-xs text-red-600">{jsonError}</span> : null}
         </div>
         <textarea
           className="h-64 w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={jsonInput}
           onChange={(event) => onJsonChange(event.target.value)}
-          placeholder="输入 JSON 变量..."
+          placeholder="Enter JSON variables..."
         />
       </div>
 
       {currentTemplate ? (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-gray-900">可用变量</p>
+          <p className="text-sm font-semibold text-gray-900">Available Variables</p>
           <div className="rounded-md border border-gray-200 bg-white p-3 shadow-sm">
             <div className="flex flex-wrap gap-2">
               {currentTemplate.variables.map((variable) => (
@@ -80,17 +80,17 @@ export function TemplateToolbar({
           onClick={onSendTest}
           className="w-full inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:hover:bg-gray-400"
         >
-          {sending ? '发送中…' : '发送测试邮件'}
+          {sending ? 'Sending...' : 'Send Test Email'}
         </button>
 
         {sendStatus === 'success' ? (
           <div className="rounded-md bg-green-50 p-3 ring-1 ring-green-200">
-            <p className="text-sm text-green-800">{sendMessage || '邮件已发送，请查收'}</p>
+            <p className="text-sm text-green-800">{sendMessage || 'Email sent successfully, please check your inbox'}</p>
           </div>
         ) : null}
         {sendStatus === 'error' ? (
           <div className="rounded-md bg-red-50 p-3 ring-1 ring-red-200">
-            <p className="text-sm text-red-800">{sendMessage || '发送失败，请稍后重试'}</p>
+            <p className="text-sm text-red-800">{sendMessage || 'Failed to send email, please try again later'}</p>
           </div>
         ) : null}
       </div>
