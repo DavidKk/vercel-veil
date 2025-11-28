@@ -1,0 +1,7 @@
+export type { AssistSidebarSection } from './AssistSidebarContext'
+export { AssistSidebarProvider, useAssistSidebar } from './AssistSidebarContext'
+export { AssistSidebarPanel } from './AssistSidebarPanel'
+export { AssistSidebarRouteListener } from './AssistSidebarRouteListener'
+export { AssistSidebarTrigger } from './AssistSidebarTrigger'
+export type { AssistSidebarDoc } from './useAssistSidebarContent'
+export { useAssistSidebarContent } from './useAssistSidebarContent'
