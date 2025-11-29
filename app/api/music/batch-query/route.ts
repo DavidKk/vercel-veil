@@ -2,20 +2,15 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, jsonSuccess } from '@/initializer/response'
-import { debug, fail, info } from '@/services/logger'
+import { fail } from '@/services/logger'
 import { batchSearch } from '@/services/navidrome'
 import { ensureApiAuthorized } from '@/utils/webhooks/auth'
 
 export const runtime = 'nodejs'
 
 export const POST = api(async (req: NextRequest) => {
-  const startTime = Date.now()
-  info('POST /api/music/batch-query - Request received')
-
   try {
-    // Support cookie, header token, or Basic Auth (username/password)
     await ensureApiAuthorized(req)
-    debug('API authenticated successfully')
 
     let body: any
     try {
@@ -44,14 +39,7 @@ export const POST = api(async (req: NextRequest) => {
       }
     }
 
-    info(`Batch searching music for ${queries.length} queries`)
     const results = await batchSearch(queries)
-
-    const duration = Date.now() - startTime
-    info(`POST /api/music/batch-query - Success (${duration}ms)`, {
-      queryCount: queries.length,
-      uniqueSongCount: results.songs.length,
-    })
 
     return jsonSuccess(results, {
       headers: new Headers({
@@ -60,8 +48,7 @@ export const POST = api(async (req: NextRequest) => {
       }),
     })
   } catch (error) {
-    const duration = Date.now() - startTime
-    fail(`POST /api/music/batch-query - Error (${duration}ms):`, error)
+    fail('POST /api/music/batch-query - Error:', error)
     throw error
   }
 })

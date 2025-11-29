@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
-import { debug, fail, info } from '@/services/logger'
+import { fail } from '@/services/logger'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
 import { ensureProwlarrAuthorized } from '@/utils/webhooks/auth'
@@ -20,23 +20,15 @@ export const runtime = 'nodejs'
  * @returns Response with status 202 on success
  */
 export const POST = api(async (req: NextRequest) => {
-  const startTime = Date.now()
-  info('POST /api/webhooks/prowlarr - Webhook received')
-
   try {
     await ensureProwlarrAuthorized(req)
-    debug('Webhook authenticated successfully')
 
     const payload = (await req.json()) as ProwlarrWebhookPayload
-    const indexerName = payload.indexer?.name ?? payload.indexers?.[0]?.name
-    debug('Webhook payload:', { eventType: payload.eventType, indexerName })
 
     if (!isProwlarrPayload(payload)) {
       fail('Invalid Prowlarr payload structure')
       return jsonInvalidParameters('unsupported payload structure')
     }
-
-    info(`Processing Prowlarr webhook: ${payload.eventType} for ${indexerName || 'unknown indexer'}`)
 
     const variables = await prepareProwlarrTemplateVariables(payload)
 
@@ -61,22 +53,14 @@ export const POST = api(async (req: NextRequest) => {
     const html = renderTemplate(template.html, templateVariables)
     const subject = `[Prowlarr][${variables.eventType}] ${variables.indexerName}`
 
-    info(`Sending notification email: ${subject}`)
     await sendNotification(subject, html)
-
-    const duration = Date.now() - startTime
-    info(`POST /api/webhooks/prowlarr - Success (${duration}ms)`, {
-      eventType: payload.eventType,
-      indexerName: variables.indexerName,
-    })
 
     return {
       ...standardResponseSuccess({ source: 'prowlarr', eventType: payload.eventType }),
       status: 202,
     }
   } catch (error) {
-    const duration = Date.now() - startTime
-    fail(`POST /api/webhooks/prowlarr - Error (${duration}ms):`, error)
+    fail('POST /api/webhooks/prowlarr - Error:', error)
     throw error
   }
 })

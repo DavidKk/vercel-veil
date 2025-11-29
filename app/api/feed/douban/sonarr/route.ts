@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server'
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, jsonSuccess } from '@/initializer/response'
 import { type DoubanRSSDTO, extractSeriesListFromDoubanRSSDTO } from '@/services/douban'
-import { debug, fail, info } from '@/services/logger'
+import { fail } from '@/services/logger'
 import { ensureApiAuthorized } from '@/utils/webhooks/auth'
 
 const RSS_HEADERS = {
@@ -15,24 +15,17 @@ const RSS_HEADERS = {
 export const runtime = 'nodejs'
 
 export const GET = api(async (req: NextRequest) => {
-  const startTime = Date.now()
-  info('GET /api/feed/douban/sonarr - Request received')
-
   try {
-    // Support cookie, header token, or Basic Auth (username/password)
     await ensureApiAuthorized(req)
-    debug('API authenticated successfully')
 
     const { searchParams } = new URL(req.url)
     const url = searchParams.get('url')
-    debug(`RSS URL: ${url}`)
 
     if (typeof url !== 'string' || !url) {
       fail('Missing url parameter')
       return jsonInvalidParameters('url parameter is required')
     }
 
-    info(`Fetching Douban RSS feed from: ${url}`)
     const response = await fetch(url, {
       method: 'GET',
       headers: RSS_HEADERS,
@@ -43,18 +36,11 @@ export const GET = api(async (req: NextRequest) => {
       return jsonInvalidParameters(`HTTP error! status: ${response.status}`)
     }
 
-    info('Parsing RSS XML...')
     const xmlText = await response.text()
     const parser = new XMLParser()
     const xmlDoc = parser.parse(xmlText) as DoubanRSSDTO
 
-    info('Extracting series list from Douban RSS...')
     const seriesList = await extractSeriesListFromDoubanRSSDTO(xmlDoc, { onlySeries: true })
-    const duration = Date.now() - startTime
-    info(`GET /api/feed/douban/sonarr - Success (${duration}ms)`, {
-      seriesCount: seriesList.length,
-      url,
-    })
 
     return jsonSuccess(seriesList, {
       headers: new Headers({
@@ -63,8 +49,7 @@ export const GET = api(async (req: NextRequest) => {
       }),
     })
   } catch (error) {
-    const duration = Date.now() - startTime
-    fail(`GET /api/feed/douban/sonarr - Error (${duration}ms):`, error)
+    fail('GET /api/feed/douban/sonarr - Error:', error)
     throw error
   }
 })
