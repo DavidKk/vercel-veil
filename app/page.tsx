@@ -22,8 +22,8 @@ export default function Home() {
           {/* Description */}
           <div className="mb-8 text-center">
             <p className="text-base leading-relaxed text-gray-700">
-              A lightweight gateway service that consolidates private service integrations, including webhook processing, email notifications, feed conversion, and finance data
-              fetching. Provides secure API endpoints with token-based authentication.
+              A lightweight gateway service that consolidates private service integrations, including webhook processing, email notifications, and feed conversion. Provides secure
+              API endpoints with token-based authentication.
             </p>
           </div>
 
@@ -47,12 +47,6 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span>Douban RSS feed conversion for Sonarr/Radarr</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <svg className="h-5 w-5 flex-shrink-0 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>TASI finance data fetching and parsing</span>
               </li>
               <li className="flex items-center gap-2">
                 <svg className="h-5 w-5 flex-shrink-0 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
