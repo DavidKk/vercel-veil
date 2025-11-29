@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { MergedMovie } from '@/services/maoyan/types'
 
@@ -33,8 +33,32 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
     }
   }
 
-  // Handle mouse down (for macOS Safari)
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Handle mouse move (for macOS Safari) - using native event
+  const handleMouseMoveNativeRef = useRef<((e: MouseEvent) => void) | null>(null)
+  const handleMouseUpNativeRef = useRef<((e: MouseEvent) => void) | null>(null)
+
+  // Initialize mouse handlers - use useEffect to avoid stale closures
+  useEffect(() => {
+    handleMouseMoveNativeRef.current = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return
+      e.preventDefault()
+      handleMove(e.clientY)
+    }
+
+    handleMouseUpNativeRef.current = (e: MouseEvent) => {
+      e.preventDefault()
+      if (handleMouseMoveNativeRef.current) {
+        document.removeEventListener('mousemove', handleMouseMoveNativeRef.current)
+      }
+      if (handleMouseUpNativeRef.current) {
+        document.removeEventListener('mouseup', handleMouseUpNativeRef.current)
+      }
+      handleEnd(e.clientY)
+    }
+  }, [currentIndex, movies.length])
+
+  // Handle mouse down (for macOS Safari) - using native event
+  const handleMouseDownNative = useCallback((e: MouseEvent) => {
     e.preventDefault()
     touchStartY.current = e.clientY
     touchStartTime.current = Date.now()
@@ -42,7 +66,14 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
     if (containerRef.current) {
       containerRef.current.style.transition = 'none'
     }
-  }
+    // Add native mouse move and up listeners
+    if (handleMouseMoveNativeRef.current) {
+      document.addEventListener('mousemove', handleMouseMoveNativeRef.current, { passive: false })
+    }
+    if (handleMouseUpNativeRef.current) {
+      document.addEventListener('mouseup', handleMouseUpNativeRef.current, { passive: false })
+    }
+  }, [])
 
   // Handle touch/mouse move
   const handleMove = (currentY: number) => {
@@ -75,15 +106,7 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
 
   // Handle touch move
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault() // Prevent scrolling
     handleMove(e.touches[0].clientY)
-  }
-
-  // Handle mouse move (for macOS Safari)
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current) return
-    e.preventDefault()
-    handleMove(e.clientY)
   }
 
   // Handle touch/mouse end
@@ -149,11 +172,6 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
     handleEnd(e.changedTouches[0].clientY)
   }
 
-  // Handle mouse up (for macOS Safari)
-  const handleMouseUp = (e: React.MouseEvent) => {
-    handleEnd(e.clientY)
-  }
-
   // Prevent scroll on body when swiping
   useEffect(() => {
     const preventScroll = (e: WheelEvent) => {
@@ -181,6 +199,13 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
+      // Cleanup native event listeners
+      if (handleMouseMoveNativeRef.current) {
+        document.removeEventListener('mousemove', handleMouseMoveNativeRef.current)
+      }
+      if (handleMouseUpNativeRef.current) {
+        document.removeEventListener('mouseup', handleMouseUpNativeRef.current)
+      }
     }
   }, [])
 
@@ -204,10 +229,16 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          handleMouseDownNative(e.nativeEvent)
+        }}
+        onMouseLeave={() => {
+          if (isDraggingRef.current && handleMouseUpNativeRef.current) {
+            const syntheticEvent = new MouseEvent('mouseup', { bubbles: true, cancelable: true })
+            handleMouseUpNativeRef.current(syntheticEvent)
+          }
+        }}
       >
         {movies.map((movie, index) => (
           <div key={`${movie.source}-${movie.maoyanId}`} className="absolute h-screen w-full" style={{ top: `${index * 100}%` }}>
