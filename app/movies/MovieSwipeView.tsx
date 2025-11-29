@@ -21,22 +21,33 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
   const animationFrameRef = useRef<number | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isAnimatingRef = useRef<boolean>(false)
+  const isDraggingRef = useRef<boolean>(false)
 
   // Handle touch start
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
     touchStartTime.current = Date.now()
+    isDraggingRef.current = true
     if (containerRef.current) {
       containerRef.current.style.transition = 'none'
     }
   }
 
-  // Handle touch move
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!containerRef.current || isAnimatingRef.current) return
+  // Handle mouse down (for macOS Safari)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    touchStartY.current = e.clientY
+    touchStartTime.current = Date.now()
+    isDraggingRef.current = true
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'none'
+    }
+  }
 
-    e.preventDefault() // Prevent scrolling
-    const currentY = e.touches[0].clientY
+  // Handle touch/mouse move
+  const handleMove = (currentY: number) => {
+    if (!containerRef.current || isAnimatingRef.current || !isDraggingRef.current) return
+
     const deltaY = currentY - touchStartY.current
     translateY.current = deltaY
 
@@ -62,9 +73,24 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
     })
   }
 
-  // Handle touch end
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!containerRef.current || isAnimatingRef.current) return
+  // Handle touch move
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault() // Prevent scrolling
+    handleMove(e.touches[0].clientY)
+  }
+
+  // Handle mouse move (for macOS Safari)
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return
+    e.preventDefault()
+    handleMove(e.clientY)
+  }
+
+  // Handle touch/mouse end
+  const handleEnd = (endY: number) => {
+    if (!containerRef.current || isAnimatingRef.current || !isDraggingRef.current) return
+
+    isDraggingRef.current = false
 
     // Cancel any pending animation frame
     if (animationFrameRef.current) {
@@ -72,8 +98,7 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
       animationFrameRef.current = null
     }
 
-    const touchEndY = e.changedTouches[0].clientY
-    const deltaY = touchEndY - touchStartY.current
+    const deltaY = endY - touchStartY.current
     const deltaTime = Date.now() - touchStartTime.current
     const velocity = deltaTime > 0 ? Math.abs(deltaY / deltaTime) : 0
 
@@ -119,11 +144,31 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
     }, 300)
   }
 
+  // Handle touch end
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    handleEnd(e.changedTouches[0].clientY)
+  }
+
+  // Handle mouse up (for macOS Safari)
+  const handleMouseUp = (e: React.MouseEvent) => {
+    handleEnd(e.clientY)
+  }
+
   // Prevent scroll on body when swiping
   useEffect(() => {
+    const preventScroll = (e: WheelEvent) => {
+      // Prevent scrolling when dragging
+      if (isDraggingRef.current) {
+        e.preventDefault()
+      }
+    }
+
     document.body.style.overflow = 'hidden'
+    document.addEventListener('wheel', preventScroll, { passive: false })
+
     return () => {
       document.body.style.overflow = ''
+      document.removeEventListener('wheel', preventScroll)
     }
   }, [])
 
@@ -154,11 +199,15 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
     <div className="fixed inset-0 overflow-hidden bg-black touch-none">
       <div
         ref={containerRef}
-        className="h-full w-full"
+        className="h-full w-full select-none"
         style={{ transform: `translateY(-${currentIndex * 100}%)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         {movies.map((movie, index) => (
           <div key={`${movie.source}-${movie.maoyanId}`} className="absolute h-screen w-full" style={{ top: `${index * 100}%` }}>

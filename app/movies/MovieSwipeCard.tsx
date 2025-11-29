@@ -19,6 +19,7 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [isFavoriting, setIsFavoriting] = useState(false)
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false)
+  const [safeAreaBottom, setSafeAreaBottom] = useState(8) // Default 8px (0.5rem)
   const alertRef = useRef<AlertImperativeHandler>(null)
   const hasUserInteracted = useRef(false)
 
@@ -33,6 +34,55 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
   useEffect(() => {
     setIsDetailsExpanded(false)
   }, [movie.tmdbId])
+
+  // Detect safe area bottom for iOS (including Chrome)
+  useEffect(() => {
+    let mounted = true
+
+    const updateSafeArea = () => {
+      if (!mounted) return
+
+      // Detect iOS device
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+      if (isIOS) {
+        // iPhone X and later have safe area at bottom (typically 34px)
+        // Detect by screen height: iPhone X (812px), XS (896px), 11 Pro (812px), 11 (896px), 12/13/14/15 (844px, 926px, etc.)
+        const screenHeight = window.screen.height
+        const hasNotch = screenHeight >= 812 || window.innerHeight >= 812
+
+        if (hasNotch) {
+          // Use 34px for devices with notch (iPhone X and later)
+          setSafeAreaBottom((prev) => (prev !== 34 ? 34 : prev))
+        } else {
+          setSafeAreaBottom((prev) => (prev !== 8 ? 8 : prev))
+        }
+      } else {
+        setSafeAreaBottom((prev) => (prev !== 8 ? 8 : prev))
+      }
+    }
+
+    // Initial calculation
+    updateSafeArea()
+
+    // Debounce resize handler
+    let resizeTimeout: NodeJS.Timeout
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(updateSafeArea, 100)
+    }
+
+    // Re-check on orientation change (with debounce)
+    window.addEventListener('resize', handleResize, { passive: true })
+    window.addEventListener('orientationchange', handleResize, { passive: true })
+
+    return () => {
+      mounted = false
+      clearTimeout(resizeTimeout)
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleResize)
+    }
+  }, [])
 
   return (
     <div className="flex h-screen w-full flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
@@ -129,7 +179,7 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
         </div>
 
         {/* Bottom section - Action buttons */}
-        <div className="flex gap-2 sm:gap-3 flex-shrink-0 mt-auto px-4 sm:px-6 pb-2 sm:pb-3" style={{ paddingBottom: `max(0.5rem, env(safe-area-inset-bottom))` }}>
+        <div className="flex gap-2 sm:gap-3 flex-shrink-0 mt-auto px-4 sm:px-6 pb-2 sm:pb-3" style={{ paddingBottom: `${safeAreaBottom}px` }}>
           {movie.tmdbUrl && (
             <a
               href={movie.tmdbUrl}
