@@ -8,7 +8,7 @@ interface LoginPageProps {
 
 export default async function LoginPage(props: LoginPageProps) {
   const { searchParams } = props
-  const { redirectUrl: url = '/templates' } = await searchParams
+  const { redirectUrl: url = '/email' } = await searchParams
   const redirectUrl = decodeURIComponent(url)
   await checkUnAccess({ redirectUrl, isApiRouter: false })
   return <LoginForm enable2FA={!!process.env.ACCESS_2FA_SECRET} redirectUrl={redirectUrl} />

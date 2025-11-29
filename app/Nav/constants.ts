@@ -1,5 +1,5 @@
 export const DEFAULT_NAV = {
-  notification: [{ name: 'Templates', href: '/templates' }],
+  notification: [{ name: 'Email', href: '/email' }],
   feed: [{ name: 'Douban', href: '/feed/douban' }],
   private: [{ name: 'Music', href: '/music' }],
 }
