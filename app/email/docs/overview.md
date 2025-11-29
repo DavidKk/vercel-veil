@@ -4,22 +4,51 @@ This page allows you to preview and test email templates used for notifications.
 
 ## How It Works
 
-1. **Template Selection**: Choose a template from the dropdown (e.g., Sonarr or Radarr templates)
+1. **Template Selection**: Choose a template from the dropdown (Sonarr, Radarr, or Prowlarr templates)
 2. **Variable Input**: Edit the JSON variables in the text area to customize the template content
 3. **Live Preview**: The preview pane shows how the email will look with your variables
 4. **Test Email**: Send a test email to verify the template works correctly
 
-## Template Variables
+## Available Templates
 
-Each template has predefined variables that can be customized:
+### Sonarr Template
 
-- `seriesTitle`: The title of the series/movie
-- `episodeTitle`: The episode title (for TV series)
-- `seasonNumber`: Season number
-- `episodeNumber`: Episode number
-- `quality`: Video quality information
-- `releaseGroup`: Release group name
-- And more...
+For TV series download/upgrade notifications from Sonarr.
+
+**Key Variables**:
+
+- `seriesTitle`: The title of the TV series
+- `episodeList`: Formatted list of episodes
+- `eventType`: Event type (Download, Upgrade, etc.)
+- `releaseDetails`: Quality, release group, size information
+- `coverImage`: Series poster image URL
+- `synopsis`: Series overview/description
+
+### Radarr Template
+
+For movie download/upgrade notifications from Radarr.
+
+**Key Variables**:
+
+- `movieTitle`: The title of the movie
+- `year`: Release year
+- `eventType`: Event type (Download, Upgrade, etc.)
+- `releaseDetails`: Quality, release group, size information
+- `coverImage`: Movie poster image URL
+- `synopsis`: Movie overview/description
+
+### Prowlarr Template
+
+For indexer status change/update notifications from Prowlarr.
+
+**Key Variables**:
+
+- `indexerName`: The name of the indexer
+- `protocol`: Indexer protocol (Torrent/Usenet)
+- `eventType`: Event type (IndexerStatusChange, IndexerUpdate, etc.)
+- `statusChange`: Status change information
+- `indexerDetails`: Protocol, priority, RSS/search settings
+- `message`: Additional notification message
 
 ## Preview Mechanism
 
@@ -110,6 +139,55 @@ curl -X POST "https://your-domain.com/api/webhooks/radarr" \
   "data": {
     "source": "radarr",
     "eventType": "Download"
+  }
+}
+```
+
+#### Prowlarr Webhook
+
+**Endpoint**: `POST /api/webhooks/prowlarr`
+
+**Description**: Receives Prowlarr webhook events and sends email notifications using the Prowlarr template. Prowlarr is an indexer manager that manages all your indexers in one place.
+
+**Authentication**: Required via `x-vv-token` header
+
+**Request Body**: Native Prowlarr webhook JSON payload
+
+**Supported Event Types**:
+
+- `Test`: Test webhook
+- `IndexerStatusChange`: Indexer status changed (e.g., Healthy → Unhealthy)
+- `IndexerUpdate`: Indexer configuration updated
+- `IndexerDelete`: Indexer deleted
+- `IndexerAdded`: New indexer added
+
+**Example Request**:
+
+```bash
+curl -X POST "https://your-domain.com/api/webhooks/prowlarr" \
+  -H "Content-Type: application/json" \
+  -H "x-vv-token: your_webhook_token" \
+  -d '{
+    "eventType": "IndexerStatusChange",
+    "indexer": {
+      "name": "RARBG",
+      "protocol": "torrent"
+    },
+    "previousStatus": "Healthy",
+    "newStatus": "Unhealthy",
+    "message": "Indexer is no longer responding"
+  }'
+```
+
+**Response**:
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "source": "prowlarr",
+    "eventType": "IndexerStatusChange"
   }
 }
 ```

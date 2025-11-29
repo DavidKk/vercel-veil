@@ -4,7 +4,7 @@
 
 ### 1. Select a Template
 
-- Use the dropdown to select a template (Sonarr or Radarr)
+- Use the dropdown to select a template (Sonarr, Radarr, or Prowlarr)
 - The template description will appear below the dropdown
 
 ### 2. Edit Variables
@@ -26,7 +26,7 @@
 
 ## External API Usage (Webhooks)
 
-**Important**: This test page is for internal use only. External users should configure Sonarr/Radarr to send webhooks directly to the webhook endpoints.
+**Important**: This test page is for internal use only. External users should configure Sonarr/Radarr/Prowlarr to send webhooks directly to the webhook endpoints.
 
 ### Configuring Sonarr Webhook
 
@@ -62,6 +62,24 @@
    - **On Rename**: ✗ (optional)
    - **On Movie Delete**: ✗ (optional)
    - **On Health Issue**: ✗ (optional)
+4. Add Custom Header:
+   - **Name**: `x-vv-token`
+   - **Value**: Your `WEBHOOK_TOKEN_SECRET` value
+5. Save the webhook
+
+### Configuring Prowlarr Webhook
+
+1. Go to Prowlarr Settings → Connect → Webhooks
+2. Click the "+" button to add a new webhook
+3. Configure:
+   - **Name**: Any name (e.g., "Vercel Veil")
+   - **URL**: `https://your-domain.com/api/webhooks/prowlarr`
+   - **Method**: `POST`
+   - **On Health**: ✓ (recommended - for indexer status changes)
+   - **On Application Update**: ✗ (optional)
+   - **On Indexer Update**: ✓ (optional)
+   - **On Indexer Delete**: ✓ (optional)
+   - **On Indexer Added**: ✓ (optional)
 4. Add Custom Header:
    - **Name**: `x-vv-token`
    - **Value**: Your `WEBHOOK_TOKEN_SECRET` value
@@ -127,6 +145,28 @@
 }
 ```
 
+#### Prowlarr Webhook Payload
+
+```json
+{
+  "eventType": "IndexerStatusChange",
+  "instanceName": "prowlarr-main",
+  "applicationUrl": "http://localhost:9696",
+  "indexer": {
+    "id": 1,
+    "name": "RARBG",
+    "protocol": "torrent",
+    "enableRss": true,
+    "enableAutomaticSearch": true,
+    "enableInteractiveSearch": true,
+    "priority": 1
+  },
+  "previousStatus": "Healthy",
+  "newStatus": "Unhealthy",
+  "message": "Indexer is no longer responding to requests"
+}
+```
+
 ### Testing Webhooks Manually
 
 You can test webhooks using curl:
@@ -161,6 +201,21 @@ curl -X POST "https://your-domain.com/api/webhooks/radarr" \
       "title": "Test Movie",
       "year": 2024
     }
+  }'
+
+# Test Prowlarr webhook
+curl -X POST "https://your-domain.com/api/webhooks/prowlarr" \
+  -H "Content-Type: application/json" \
+  -H "x-vv-token: your_webhook_token" \
+  -d '{
+    "eventType": "IndexerStatusChange",
+    "indexer": {
+      "name": "Test Indexer",
+      "protocol": "torrent"
+    },
+    "previousStatus": "Healthy",
+    "newStatus": "Unhealthy",
+    "message": "Test notification"
   }'
 ```
 
