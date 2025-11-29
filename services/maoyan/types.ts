@@ -48,8 +48,8 @@ export interface MergedMovie {
   poster: string
   score?: string
   wish?: number
-  source: 'topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming' | 'tmdbNowPlaying'
-  sources: ('topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming' | 'tmdbNowPlaying')[] // 可能同时出现在多个列表中
+  source: 'topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming'
+  sources: ('topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming')[] // 可能同时出现在多个列表中
 
   // TMDB 数据（通过搜索获取）
   tmdbId?: number

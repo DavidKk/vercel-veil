@@ -128,8 +128,23 @@ async function batchEnrichMoviesWithTMDB(movies: MergedMovie[], tmdbTitleMap?: M
   if (tmdbTitleMap) {
     for (let i = 0; i < movies.length; i++) {
       const movie = movies[i]
-      const key = movie.name.toLowerCase().trim()
-      const tmdbMovie = tmdbTitleMap.get(key)
+      // Try to find matching TMDB movie using fuzzy matching
+      let tmdbMovie: TMDBMovie | undefined
+
+      // First try exact match
+      const exactKey = movie.name.toLowerCase().trim()
+      tmdbMovie = tmdbTitleMap.get(exactKey)
+
+      // If not found, try fuzzy match using normalized title
+      if (!tmdbMovie) {
+        const normalizedName = normalizeTitle(movie.name)
+        for (const [title, tmdb] of tmdbTitleMap.entries()) {
+          if (normalizeTitle(title) === normalizedName) {
+            tmdbMovie = tmdb
+            break
+          }
+        }
+      }
 
       if (tmdbMovie) {
         // Use existing TMDB data
@@ -240,7 +255,7 @@ async function batchEnrichMoviesWithTMDB(movies: MergedMovie[], tmdbTitleMap?: M
 /**
  * Convert TMDB movie to MergedMovie format
  */
-async function convertTMDBMovieToMergedMovie(tmdbMovie: TMDBMovie, source: 'tmdbPopular' | 'tmdbUpcoming' | 'tmdbNowPlaying'): Promise<MergedMovie> {
+async function convertTMDBMovieToMergedMovie(tmdbMovie: TMDBMovie, source: 'tmdbPopular' | 'tmdbUpcoming'): Promise<MergedMovie> {
   const movie: MergedMovie = {
     maoyanId: `tmdb-${tmdbMovie.id}`, // Use TMDB ID as identifier
     name: tmdbMovie.title,
@@ -295,17 +310,64 @@ async function convertTMDBMovieToMergedMovie(tmdbMovie: TMDBMovie, source: 'tmdb
 }
 
 /**
- * Merge TMDB movies into existing movie map
+ * Normalize movie title for matching (remove punctuation, normalize spaces)
  */
-async function mergeTMDBMovies(movieMap: Map<string, MergedMovie>, tmdbMovies: TMDBMovie[], source: 'tmdbPopular' | 'tmdbUpcoming' | 'tmdbNowPlaying'): Promise<void> {
-  for (const tmdbMovie of tmdbMovies) {
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[，。！？、；：""''（）【】《》\s]+/g, ' ') // Replace Chinese and common punctuation with space
+    .replace(/[^\w\s\u4e00-\u9fa5]/g, '') // Remove other punctuation, keep Chinese characters, letters, numbers
+    .replace(/\s+/g, ' ') // Normalize multiple spaces to single space
+    .trim()
+}
+
+/**
+ * Find matching movie in map by title (fuzzy matching)
+ */
+function findMatchingMovie(movieMap: Map<string, MergedMovie>, title: string): MergedMovie | undefined {
+  const normalizedTitle = normalizeTitle(title)
+
+  // First try exact match
+  for (const [key, movie] of movieMap.entries()) {
+    if (normalizeTitle(key) === normalizedTitle) {
+      return movie
+    }
+  }
+
+  // Then try partial match (one contains the other)
+  for (const [key, movie] of movieMap.entries()) {
+    const normalizedKey = normalizeTitle(key)
+    if (normalizedTitle.includes(normalizedKey) || normalizedKey.includes(normalizedTitle)) {
+      return movie
+    }
+  }
+
+  return undefined
+}
+
+/**
+ * Merge TMDB movies into existing movie map
+ * @param movieMap Map to merge movies into
+ * @param tmdbMovies TMDB movies to merge
+ * @param source Source type ('tmdbPopular' | 'tmdbUpcoming')
+ * @param isFromNowPlaying Whether these movies are from now playing list (will be filtered by rating >= 7.0 and merged as upcoming)
+ */
+async function mergeTMDBMovies(movieMap: Map<string, MergedMovie>, tmdbMovies: TMDBMovie[], source: 'tmdbPopular' | 'tmdbUpcoming', isFromNowPlaying = false): Promise<void> {
+  // Filter now playing movies by rating (>= 7.0) if needed
+  const moviesToMerge = isFromNowPlaying ? tmdbMovies.filter((movie) => (movie.vote_average || 0) >= 7.0) : tmdbMovies
+
+  // For now playing movies, merge them as upcoming
+  const effectiveSource: 'tmdbPopular' | 'tmdbUpcoming' = isFromNowPlaying ? 'tmdbUpcoming' : source
+
+  for (const tmdbMovie of moviesToMerge) {
     const key = tmdbMovie.title.toLowerCase().trim()
-    const existing = movieMap.get(key)
+    const existing = findMatchingMovie(movieMap, tmdbMovie.title)
 
     if (existing) {
       // If exists, merge sources
-      if (!existing.sources.includes(source)) {
-        existing.sources.push(source)
+      if (!existing.sources.includes(effectiveSource)) {
+        existing.sources.push(effectiveSource)
       }
       // Update TMDB data if not already present
       if (!existing.tmdbId && tmdbMovie.id) {
@@ -349,7 +411,7 @@ async function mergeTMDBMovies(movieMap: Map<string, MergedMovie>, tmdbMovies: T
       }
     } else {
       // New movie from TMDB
-      const newMovie = await convertTMDBMovieToMergedMovie(tmdbMovie, source)
+      const newMovie = await convertTMDBMovieToMergedMovie(tmdbMovie, effectiveSource)
       movieMap.set(key, newMovie)
     }
   }
@@ -358,17 +420,19 @@ async function mergeTMDBMovies(movieMap: Map<string, MergedMovie>, tmdbMovies: T
 /**
  * Get and merge movie lists, enrich with TMDB information
  * @param options Options for fetching TMDB movies
+ *   - includeTMDBPopular: Include popular movies from TMDB (default: true)
+ *   - includeTMDBUpcoming: Include upcoming movies from TMDB, merged with now playing movies (default: true)
+ *     Now playing movies with rating >= 7.0 will be included in upcoming list
  */
 export interface GetMergedMoviesListOptions {
   includeTMDBPopular?: boolean
   includeTMDBUpcoming?: boolean
-  includeTMDBNowPlaying?: boolean
 }
 
 export async function getMergedMoviesList(options: GetMergedMoviesListOptions = {}): Promise<MergedMovie[]> {
   info('Fetching and merging movie lists from Maoyan and TMDB')
 
-  const { includeTMDBPopular = true, includeTMDBUpcoming = true, includeTMDBNowPlaying = false } = options
+  const { includeTMDBPopular = true, includeTMDBUpcoming = true } = options
 
   // Fetch Maoyan lists
   const [topRated, mostExpected] = await Promise.all([fetchTopRatedMovies(), fetchMostExpected(20, 0)])
@@ -423,13 +487,12 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
       tmdbPromises.push(fetchPopularMovies({ language: 'zh-CN', page: 1 }))
     }
 
+    // Merge upcoming and now playing into one list
     if (includeTMDBUpcoming) {
       // TMDB's /movie/upcoming API returns movies scheduled to be released in the next 4 weeks (28 days)
-      // This matches the default behavior on https://www.themoviedb.org/movie/upcoming
+      // TMDB's /movie/now_playing API returns movies currently in theaters
+      // We merge both into "upcoming" list, with now playing movies filtered by rating >= 7.0
       tmdbPromises.push(fetchUpcomingMovies({ language: 'zh-CN', page: 1 }))
-    }
-
-    if (includeTMDBNowPlaying) {
       tmdbPromises.push(fetchNowPlayingMovies({ language: 'zh-CN', page: 1 }))
     }
 
@@ -441,53 +504,76 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
       const tmdbResults = await Promise.allSettled(tmdbPromises)
 
       let tmdbIndex = 0
-      if (includeTMDBPopular && tmdbResults[tmdbIndex]?.status === 'fulfilled') {
+      if (includeTMDBPopular) {
         const result = tmdbResults[tmdbIndex]
-        if (result.status === 'fulfilled') {
+        if (result?.status === 'fulfilled') {
           const movies = result.value
-          await mergeTMDBMovies(movieMap, movies, 'tmdbPopular')
-          // Add to title map for efficient lookup during enrichment
-          for (const movie of movies) {
-            const key = movie.title.toLowerCase().trim()
-            if (!tmdbTitleMap.has(key)) {
-              tmdbTitleMap.set(key, movie)
+          if (movies && movies.length > 0) {
+            await mergeTMDBMovies(movieMap, movies, 'tmdbPopular')
+            // Add to title map for efficient lookup during enrichment
+            for (const movie of movies) {
+              const key = movie.title.toLowerCase().trim()
+              if (!tmdbTitleMap.has(key)) {
+                tmdbTitleMap.set(key, movie)
+              }
             }
+            info(`Merged ${movies.length} popular movies from TMDB`)
+          } else {
+            warn('TMDB popular movies returned empty array')
           }
-          info(`Merged ${movies.length} popular movies from TMDB`)
+        } else if (result?.status === 'rejected') {
+          fail('TMDB popular movies request failed:', result.reason)
         }
         tmdbIndex++
       }
 
-      if (includeTMDBUpcoming && tmdbResults[tmdbIndex]?.status === 'fulfilled') {
-        const result = tmdbResults[tmdbIndex]
-        if (result.status === 'fulfilled') {
-          const movies = result.value
-          await mergeTMDBMovies(movieMap, movies, 'tmdbUpcoming')
-          // Add to title map for efficient lookup during enrichment
-          for (const movie of movies) {
-            const key = movie.title.toLowerCase().trim()
-            if (!tmdbTitleMap.has(key)) {
-              tmdbTitleMap.set(key, movie)
+      if (includeTMDBUpcoming) {
+        // Merge upcoming movies
+        const upcomingResult = tmdbResults[tmdbIndex]
+        if (upcomingResult?.status === 'fulfilled') {
+          const movies = upcomingResult.value
+          if (movies && movies.length > 0) {
+            await mergeTMDBMovies(movieMap, movies, 'tmdbUpcoming')
+            // Add to title map for efficient lookup during enrichment
+            for (const movie of movies) {
+              const key = movie.title.toLowerCase().trim()
+              if (!tmdbTitleMap.has(key)) {
+                tmdbTitleMap.set(key, movie)
+              }
             }
+            info(`Merged ${movies.length} upcoming movies from TMDB`)
+          } else {
+            warn('TMDB upcoming movies returned empty array')
           }
-          info(`Merged ${movies.length} upcoming movies from TMDB`)
+        } else if (upcomingResult?.status === 'rejected') {
+          fail('TMDB upcoming movies request failed:', upcomingResult.reason)
         }
         tmdbIndex++
-      }
 
-      if (includeTMDBNowPlaying && tmdbResults[tmdbIndex]?.status === 'fulfilled') {
-        const result = tmdbResults[tmdbIndex]
-        if (result.status === 'fulfilled') {
-          const movies = result.value
-          await mergeTMDBMovies(movieMap, movies, 'tmdbNowPlaying')
-          // Add to title map for efficient lookup during enrichment
-          for (const movie of movies) {
-            const key = movie.title.toLowerCase().trim()
-            if (!tmdbTitleMap.has(key)) {
-              tmdbTitleMap.set(key, movie)
+        // Merge now playing movies (filtered by rating >= 7.0)
+        const nowPlayingResult = tmdbResults[tmdbIndex]
+        if (nowPlayingResult?.status === 'fulfilled') {
+          const movies = nowPlayingResult.value
+          if (movies && movies.length > 0) {
+            const filteredMovies = movies.filter((movie) => (movie.vote_average || 0) >= 7.0)
+            if (filteredMovies.length > 0) {
+              await mergeTMDBMovies(movieMap, filteredMovies, 'tmdbUpcoming', true)
+              // Add to title map for efficient lookup during enrichment
+              for (const movie of filteredMovies) {
+                const key = movie.title.toLowerCase().trim()
+                if (!tmdbTitleMap.has(key)) {
+                  tmdbTitleMap.set(key, movie)
+                }
+              }
+              info(`Merged ${filteredMovies.length} now playing movies from TMDB (filtered from ${movies.length} total, rating >= 7.0)`)
+            } else {
+              warn(`No now playing movies with rating >= 7.0 (from ${movies.length} total)`)
             }
+          } else {
+            warn('TMDB now playing movies returned empty array')
           }
-          info(`Merged ${movies.length} now playing movies from TMDB`)
+        } else if (nowPlayingResult?.status === 'rejected') {
+          fail('TMDB now playing movies request failed:', nowPlayingResult.reason)
         }
       }
     }
@@ -505,6 +591,7 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
     }
   }
 
+  // Return all merged movies (no filtering by wish data)
   const finalMovies = Array.from(movieMap.values())
   info(`Final merged list: ${finalMovies.length} unique movies`)
   return finalMovies

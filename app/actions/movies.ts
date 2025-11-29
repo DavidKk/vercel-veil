@@ -13,8 +13,9 @@ import { hasTmdbAuth } from '@/services/tmdb/env'
  * Underlying API requests are cached at the atomic level (fetchTopRatedMovies, fetchMostExpected)
  * @param options Options for fetching movies
  *   - includeTMDBPopular: Include popular movies from TMDB (default: true)
- *   - includeTMDBUpcoming: Include upcoming movies from TMDB (default: true, returns next 4 weeks like TMDB website)
- *   - includeTMDBNowPlaying: Include now playing movies from TMDB (default: false)
+ *   - includeTMDBUpcoming: Include upcoming movies from TMDB, merged with now playing movies (default: true)
+ *     Now playing movies with rating >= 7.0 will be included in upcoming list
+ * Note: Only movies with wish data (from Maoyan) will be returned
  */
 export type GetMoviesListOptions = GetMergedMoviesListOptions
 

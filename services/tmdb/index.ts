@@ -151,6 +151,10 @@ export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Prom
     }
 
     const data = (await response.json()) as TMDBMoviesResponse
+    if (!data || !data.results) {
+      warn(`TMDB fetch popular movies: invalid response structure`, data)
+      return []
+    }
     info(`Fetched ${data.results.length} popular movies from TMDB`)
     return data.results
   } catch (error) {
@@ -195,6 +199,10 @@ export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Pro
     }
 
     const data = (await response.json()) as TMDBMoviesResponse
+    if (!data || !data.results) {
+      warn(`TMDB fetch upcoming movies: invalid response structure`, data)
+      return []
+    }
     info(`Fetched ${data.results.length} upcoming movies from TMDB`)
     return data.results
   } catch (error) {
@@ -237,6 +245,10 @@ export async function fetchNowPlayingMovies(options: FetchMoviesOptions = {}): P
     }
 
     const data = (await response.json()) as TMDBMoviesResponse
+    if (!data || !data.results) {
+      warn(`TMDB fetch now playing movies: invalid response structure`, data)
+      return []
+    }
     info(`Fetched ${data.results.length} now playing movies from TMDB`)
     return data.results
   } catch (error) {

@@ -19,13 +19,14 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [isFavoriting, setIsFavoriting] = useState(false)
   const alertRef = useRef<AlertImperativeHandler>(null)
+  const hasUserInteracted = useRef(false)
 
-  // Update local state when prop changes (only if not currently processing)
+  // Only update from prop if user hasn't interacted yet (initial mount or movie changed)
   useEffect(() => {
-    if (!isFavoriting) {
+    if (!hasUserInteracted.current) {
       setIsFavorited(initialIsFavorited)
     }
-  }, [initialIsFavorited, isFavoriting])
+  }, [initialIsFavorited, movie.tmdbId]) // Reset when movie changes
 
   // Get source badge text
   const getSourceBadgeText = () => {
@@ -132,6 +133,9 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
               onClick={async () => {
                 if (!movie.tmdbId || isFavoriting) return
 
+                // Mark that user has interacted
+                hasUserInteracted.current = true
+
                 // Optimistic update: immediately update UI
                 const newFavoriteState = !isFavorited
                 setIsFavorited(newFavoriteState)
@@ -144,6 +148,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
                     setIsFavorited(!newFavoriteState)
                     alertRef.current?.show(result.message, { type: 'error' })
                   }
+                  // If success, keep the new state (already set optimistically)
                 } catch (error) {
                   // Rollback on error
                   setIsFavorited(!newFavoriteState)
