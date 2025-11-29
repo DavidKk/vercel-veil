@@ -1,8 +1,9 @@
 import { XMLParser } from 'fast-xml-parser'
 import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 import { api } from '@/initializer/controller'
-import { jsonInvalidParameters, jsonSuccess } from '@/initializer/response'
+import { jsonInvalidParameters } from '@/initializer/response'
 import { type DoubanRSSDTO, extractSeriesListFromDoubanRSSDTO } from '@/services/douban'
 import { fail } from '@/services/logger'
 
@@ -38,7 +39,7 @@ export const GET = api(async (req: NextRequest) => {
 
   const seriesList = await extractSeriesListFromDoubanRSSDTO(xmlDoc, { onlySeries: true })
 
-  return jsonSuccess(seriesList, {
+  return NextResponse.json(seriesList, {
     headers: new Headers({
       'Content-Type': 'application/json;charset=UTF-8',
       'Access-Control-Allow-Origin': '*',
