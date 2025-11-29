@@ -51,5 +51,17 @@ declare namespace NodeJS {
     VERCEL_ACCESS_TOKEN?: string
     /** Comma-separated list of Vercel projects to exclude from display */
     VERCEL_PROJECT_EXCLUDES?: string
+
+    /** Navidrome music server configuration */
+    /** Navidrome server URL (e.g. "https://music.example.com") */
+    NAVIDROME_URL?: string
+    /** Navidrome username for API authentication */
+    NAVIDROME_USERNAME?: string
+    /** Navidrome password for API authentication */
+    NAVIDROME_PASSWORD?: string
+
+    /** Cache configuration */
+    /** Enable/disable cache (default: "1" for enabled, "0" for disabled) */
+    CACHE?: string
   }
 }

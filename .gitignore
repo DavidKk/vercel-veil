@@ -59,5 +59,12 @@ nbproject
 *.sublime-project
 *.sublime-workspace
 .idea
+# Environment variables (ignore all .env files except .env.example)
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Allow .env.example to be committed (it only contains example values)
+!.env.example
 test-results
