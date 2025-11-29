@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
+import { debug, fail, info } from '@/services/logger'
 import { resolvePreferredTitle } from '@/services/metadata/title'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
@@ -20,46 +21,71 @@ export const runtime = 'nodejs'
  * @returns Response with status 202 on success
  */
 export const POST = api(async (req: NextRequest) => {
-  ensureAuthorized(req)
+  const startTime = Date.now()
+  info('POST /api/webhooks/radarr - Webhook received')
 
-  const payload = (await req.json()) as RadarrWebhookPayload
-  if (!isRadarrPayload(payload)) {
-    return jsonInvalidParameters('unsupported payload structure')
-  }
+  try {
+    ensureAuthorized(req)
+    debug('Webhook authenticated successfully')
 
-  const defaultTitle = payload.movie?.title ?? payload.remoteMovie?.title
-  const preferredTitle = await resolvePreferredTitle({ defaultTitle, mediaType: 'movie' })
+    const payload = (await req.json()) as RadarrWebhookPayload
+    const movieTitle = payload.movie?.title ?? payload.remoteMovie?.title
+    debug('Webhook payload:', { eventType: payload.eventType, movieTitle })
 
-  const variables = await prepareRadarrTemplateVariables(payload, preferredTitle)
+    if (!isRadarrPayload(payload)) {
+      fail('Invalid Radarr payload structure')
+      return jsonInvalidParameters('unsupported payload structure')
+    }
 
-  const template = getTemplate('radarr-default')
-  if (!template) {
-    return jsonInvalidParameters('template not found')
-  }
+    info(`Processing Radarr webhook: ${payload.eventType} for ${movieTitle || 'unknown movie'}`)
 
-  const templateVariables: Record<string, string> = {
-    movieTitle: variables.movieTitle,
-    eventType: variables.eventType,
-    actionLabel: variables.actionLabel,
-    year: variables.year,
-    instanceName: variables.instanceName,
-    downloadClient: variables.downloadClient,
-    isUpgrade: variables.isUpgrade,
-    releaseDetails: variables.releaseDetails,
-    coverImage: variables.coverImage,
-    synopsis: variables.synopsis,
-    detailUrl: variables.detailUrl,
-  }
+    const defaultTitle = movieTitle
+    const preferredTitle = await resolvePreferredTitle({ defaultTitle, mediaType: 'movie' })
+    debug(`Resolved preferred title: ${preferredTitle || defaultTitle}`)
 
-  const html = renderTemplate(template.html, templateVariables)
+    const variables = await prepareRadarrTemplateVariables(payload, preferredTitle)
 
-  const year = variables.year ? ` (${variables.year})` : ''
-  const subject = `[Radarr][${variables.eventType}] ${variables.movieTitle}${year}`
+    const template = getTemplate('radarr-default')
+    if (!template) {
+      fail('Template not found: radarr-default')
+      return jsonInvalidParameters('template not found')
+    }
 
-  await sendNotification(subject, html)
+    const templateVariables: Record<string, string> = {
+      movieTitle: variables.movieTitle,
+      eventType: variables.eventType,
+      actionLabel: variables.actionLabel,
+      year: variables.year,
+      instanceName: variables.instanceName,
+      downloadClient: variables.downloadClient,
+      isUpgrade: variables.isUpgrade,
+      releaseDetails: variables.releaseDetails,
+      coverImage: variables.coverImage,
+      synopsis: variables.synopsis,
+      detailUrl: variables.detailUrl,
+    }
 
-  return {
-    ...standardResponseSuccess({ source: 'radarr', eventType: payload.eventType }),
-    status: 202,
+    const html = renderTemplate(template.html, templateVariables)
+
+    const year = variables.year ? ` (${variables.year})` : ''
+    const subject = `[Radarr][${variables.eventType}] ${variables.movieTitle}${year}`
+
+    info(`Sending notification email: ${subject}`)
+    await sendNotification(subject, html)
+
+    const duration = Date.now() - startTime
+    info(`POST /api/webhooks/radarr - Success (${duration}ms)`, {
+      eventType: payload.eventType,
+      movieTitle: variables.movieTitle,
+    })
+
+    return {
+      ...standardResponseSuccess({ source: 'radarr', eventType: payload.eventType }),
+      status: 202,
+    }
+  } catch (error) {
+    const duration = Date.now() - startTime
+    fail(`POST /api/webhooks/radarr - Error (${duration}ms):`, error)
+    throw error
   }
 })
