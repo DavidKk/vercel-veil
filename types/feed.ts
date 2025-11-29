@@ -16,6 +16,8 @@ export interface Series {
   chineseTitle?: string
   /** 类型 */
   mediaType?: MovieMediaType
+  /** 年份 */
+  year?: number
   /** thetvdb.com */
   tvdbId?: MovieId
   /** themoviedb.org */

@@ -75,10 +75,28 @@ export async function extractSeriesListFromDoubanRSSDTO(dto: DoubanRSSDTO, optio
           const tmdbId = detail?.id
           const mediaType = detail?.media_type === 'movie' ? 'movie' : 'series'
 
+          // Extract year from release_date (movie) or first_air_date (tv)
+          let year: number | undefined
+          if (detail?.media_type === 'movie' && 'release_date' in detail && detail.release_date) {
+            const yearMatch = detail.release_date.match(/^(\d{4})/)
+            if (yearMatch) {
+              year = parseInt(yearMatch[1], 10)
+            }
+          } else if (detail?.media_type === 'tv' && 'first_air_date' in detail && detail.first_air_date) {
+            const yearMatch = detail.first_air_date.match(/^(\d{4})/)
+            if (yearMatch) {
+              year = parseInt(yearMatch[1], 10)
+            }
+          }
+
           if (tmdbId) {
             info(`Found TMDB ID ${tmdbId} for series: ${title}`)
             series.tmdbId = tmdbId
             series.mediaType = mediaType
+            if (year) {
+              series.year = year
+              info(`Found year ${year} for series: ${title}`)
+            }
           } else {
             info(`No TMDB ID found for series: ${title}`)
           }
@@ -108,10 +126,23 @@ export async function extractSeriesListFromDoubanRSSDTO(dto: DoubanRSSDTO, optio
           const imdbId = remoteIds.find((id) => id.sourceName === 'IMDB')?.id
           const tmdbId = remoteIds.find((id) => id.sourceName === 'TheMovieDB.com')?.id
 
+          // Extract year from TheTVDB year field (string format)
+          let year: number | undefined
+          if (detail?.year) {
+            const yearNum = parseInt(detail.year, 10)
+            if (!isNaN(yearNum)) {
+              year = yearNum
+            }
+          }
+
           if (tvdbid) {
             info(`Found TVDB ID ${tvdbid} for series: ${title}`)
             series.tvdbId = tvdbid
             series.mediaType = mediaType
+            if (year) {
+              series.year = year
+              info(`Found year ${year} for series: ${title}`)
+            }
           } else {
             info(`No TVDB ID found for series: ${title}`)
           }

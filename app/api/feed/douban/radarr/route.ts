@@ -39,7 +39,35 @@ export const GET = api(async (req: NextRequest) => {
 
   const seriesList = await extractSeriesListFromDoubanRSSDTO(xmlDoc, { onlyMovie: true })
 
-  return NextResponse.json(seriesList, {
+  // Radarr custom import list requires specific format:
+  // { id: number, rank: number, adult: number, title: string, tvdbid: any, imdb_id: string, mediatype: string, release_year: number }[]
+  const radarrList = seriesList
+    .filter((item) => item.mediaType === 'movie' && item.tmdbId)
+    .map((item, index) => {
+      const tmdbId = typeof item.tmdbId === 'number' ? item.tmdbId : parseInt(String(item.tmdbId), 10)
+      const result: {
+        id: number
+        rank: number
+        adult: number
+        title: string
+        tvdbid: any
+        imdb_id: string
+        mediatype: string
+        release_year: number
+      } = {
+        id: tmdbId,
+        rank: index + 1,
+        adult: 0,
+        title: item.title,
+        tvdbid: item.tvdbId || null,
+        imdb_id: item.imdbId ? String(item.imdbId) : '',
+        mediatype: 'movie',
+        release_year: item.year || 0,
+      }
+      return result
+    })
+
+  return NextResponse.json(radarrList, {
     headers: new Headers({
       'Content-Type': 'application/json;charset=UTF-8',
       'Access-Control-Allow-Origin': '*',
