@@ -1,3 +1,4 @@
+import prowlarrDefault from '@/templates/emails/prowlarr-default.html?raw'
 import radarrDefault from '@/templates/emails/radarr-default.html?raw'
 import sonarrDefault from '@/templates/emails/sonarr-default.html?raw'
 
@@ -50,6 +51,25 @@ const templates: EmailTemplateDefinition[] = [
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
       detailUrl: 'https://www.themoviedb.org/movie/693134-dune-part-two',
+    },
+  },
+  {
+    id: 'prowlarr-default',
+    name: 'Prowlarr Default Template',
+    description: 'Base template for Prowlarr webhook notifications',
+    html: prowlarrDefault,
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'applicationUrl'],
+    defaultVariables: {
+      indexerName: 'RARBG',
+      eventType: 'IndexerStatusChange',
+      actionLabel: '索引器状态变更',
+      instanceName: 'prowlarr-main',
+      protocol: 'Torrent',
+      statusChange: 'Healthy → Unhealthy',
+      message: 'Indexer status has changed',
+      indexerDetails:
+        '<div class="stack-item">Protocol: Torrent</div><div class="stack-item">Priority: 1</div><div class="stack-item">RSS: Enabled</div><div class="stack-item">Automatic Search: Enabled</div>',
+      applicationUrl: 'http://localhost:9696',
     },
   },
 ]
