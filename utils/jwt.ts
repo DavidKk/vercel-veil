@@ -2,7 +2,9 @@ import jwt from 'jsonwebtoken'
 
 export function generateToken(payload: object) {
   const { JWT_SECRET, JWT_EXPIRES_IN } = getJWTConfig()
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: parseInt(JWT_EXPIRES_IN) })
+  // Support both numeric seconds (e.g. "86400") and string formats like "1d"
+  const expiresIn = /^\d+$/.test(JWT_EXPIRES_IN) ? Number(JWT_EXPIRES_IN) : JWT_EXPIRES_IN
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as any })
 }
 
 export function verifyToken(token: string) {
