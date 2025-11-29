@@ -119,6 +119,7 @@ export interface FetchMoviesOptions extends SearchOptions {
 
 /**
  * Fetch popular movies from TMDB
+ * Returns movies released from 2 weeks ago to today with rating >= 7.0
  */
 export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Promise<TMDBMovie[]> {
   const apiKey = getTmdbApiKey()
@@ -126,19 +127,31 @@ export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Prom
   const page = options.page ?? 1
 
   try {
-    info(`Fetching popular movies from TMDB (page=${page})`)
+    // Calculate date range: 2 weeks ago to today
+    const today = new Date()
+    const twoWeeksAgo = new Date()
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+
+    const dateGte = twoWeeksAgo.toISOString().split('T')[0] // YYYY-MM-DD
+    const dateLte = today.toISOString().split('T')[0] // YYYY-MM-DD
+
+    info(`Fetching popular movies from TMDB (page=${page}, date range: ${dateGte} to ${dateLte}, rating >= 7.0)`)
 
     const params = new URLSearchParams({
       api_key: apiKey,
       language,
       page: String(page),
+      sort_by: 'popularity.desc',
+      'primary_release_date.gte': dateGte,
+      'primary_release_date.lte': dateLte,
+      'vote_average.gte': '7.0',
     })
 
     if (options.region) {
       params.set('region', options.region)
     }
 
-    const apiUrl = `${TMDB.API_BASE_URL}/movie/popular?${params.toString()}`
+    const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -165,8 +178,7 @@ export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Prom
 
 /**
  * Fetch upcoming movies from TMDB
- * Returns movies scheduled to be released in the next 4 weeks (28 days)
- * This matches the default behavior on https://www.themoviedb.org/movie/upcoming
+ * Returns movies scheduled to be released in the next month (30 days)
  */
 export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Promise<TMDBMovie[]> {
   const apiKey = getTmdbApiKey()
@@ -174,19 +186,30 @@ export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Pro
   const page = options.page ?? 1
 
   try {
-    info(`Fetching upcoming movies from TMDB (page=${page})`)
+    // Calculate date range: today to 1 month from now
+    const today = new Date()
+    const oneMonthLater = new Date()
+    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
+
+    const dateGte = today.toISOString().split('T')[0] // YYYY-MM-DD
+    const dateLte = oneMonthLater.toISOString().split('T')[0] // YYYY-MM-DD
+
+    info(`Fetching upcoming movies from TMDB (page=${page}, date range: ${dateGte} to ${dateLte})`)
 
     const params = new URLSearchParams({
       api_key: apiKey,
       language,
       page: String(page),
+      sort_by: 'popularity.desc',
+      'primary_release_date.gte': dateGte,
+      'primary_release_date.lte': dateLte,
     })
 
     if (options.region) {
       params.set('region', options.region)
     }
 
-    const apiUrl = `${TMDB.API_BASE_URL}/movie/upcoming?${params.toString()}`
+    const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -207,52 +230,6 @@ export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Pro
     return data.results
   } catch (error) {
     fail('TMDB fetch upcoming movies error:', error)
-    return []
-  }
-}
-
-/**
- * Fetch now playing movies from TMDB
- */
-export async function fetchNowPlayingMovies(options: FetchMoviesOptions = {}): Promise<TMDBMovie[]> {
-  const apiKey = getTmdbApiKey()
-  const language = options.language ?? process.env.TMDB_LANGUAGE ?? 'zh-CN'
-  const page = options.page ?? 1
-
-  try {
-    info(`Fetching now playing movies from TMDB (page=${page})`)
-
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      language,
-      page: String(page),
-    })
-
-    if (options.region) {
-      params.set('region', options.region)
-    }
-
-    const apiUrl = `${TMDB.API_BASE_URL}/movie/now_playing?${params.toString()}`
-    const response = await fetch(apiUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      fail(`TMDB fetch now playing movies failed: status=${response.status} ${response.statusText}`)
-      return []
-    }
-
-    const data = (await response.json()) as TMDBMoviesResponse
-    if (!data || !data.results) {
-      warn(`TMDB fetch now playing movies: invalid response structure`, data)
-      return []
-    }
-    info(`Fetched ${data.results.length} now playing movies from TMDB`)
-    return data.results
-  } catch (error) {
-    fail('TMDB fetch now playing movies error:', error)
     return []
   }
 }

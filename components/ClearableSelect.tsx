@@ -41,6 +41,7 @@ export default function ClearableSelect(props: ClearableSelectProps) {
         required={required}
         value={selectedOption}
         onChange={handleOptionChange}
+        suppressHydrationWarning
         className={`h-9 w-full pl-3.5 pr-9 appearance-none border border-gray-300 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-gray-400 ${
           selectedOption ? 'text-gray-900' : 'text-gray-500'
         }`}

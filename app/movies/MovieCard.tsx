@@ -4,17 +4,21 @@ import { Heart } from 'feather-icons-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { favoriteMovie } from '@/app/actions/movies'
+import { favoriteMovieWithToken } from '@/app/actions/movies-share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
 import type { MergedMovie } from '@/services/maoyan/types'
+
+import LazyImage from './components/LazyImage'
 
 interface MovieCardProps {
   movie: MergedMovie
   favoriteAvailable: boolean
   isFavorited: boolean
+  shareToken?: string
 }
 
-export default function MovieCard({ movie, favoriteAvailable, isFavorited: initialIsFavorited }: MovieCardProps) {
+export default function MovieCard({ movie, favoriteAvailable, isFavorited: initialIsFavorited, shareToken }: MovieCardProps) {
   const posterUrl = movie.tmdbPoster || movie.poster
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [isFavoriting, setIsFavoriting] = useState(false)
@@ -45,11 +49,12 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
     <div className="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-gray-200 transition-all hover:shadow-xl hover:ring-indigo-500">
       {/* Poster Image */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-gray-100">
-        <img
+        <LazyImage
           src={posterUrl}
           alt={movie.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
+          preloadDistance={1}
           onError={(e) => {
             // Use placeholder if image fails to load
             const target = e.target as HTMLImageElement
@@ -118,6 +123,16 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
 
         {/* Action Buttons - Use mt-auto to push to bottom */}
         <div className="mt-auto flex gap-2">
+          {movie.maoyanUrl && (
+            <a
+              href={movie.maoyanUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 rounded-lg bg-orange-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-orange-700"
+            >
+              猫眼
+            </a>
+          )}
           {movie.tmdbUrl && (
             <a
               href={movie.tmdbUrl}
@@ -125,7 +140,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
               rel="noopener noreferrer"
               className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-indigo-700"
             >
-              View Details
+              TMDB
             </a>
           )}
           {movie.tmdbId && favoriteAvailable && (
@@ -142,7 +157,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
                 setIsFavoriting(true)
 
                 try {
-                  const result = await favoriteMovie(movie.tmdbId, newFavoriteState)
+                  const result = shareToken ? await favoriteMovieWithToken(movie.tmdbId, shareToken, newFavoriteState) : await favoriteMovie(movie.tmdbId, newFavoriteState)
                   if (!result.success) {
                     // Rollback on failure
                     setIsFavorited(!newFavoriteState)

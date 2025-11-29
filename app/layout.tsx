@@ -33,10 +33,10 @@ export default function RootLayout(props: Readonly<RootLayoutProps>) {
   const { children } = props
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <Analytics />
       <SpeedInsights />
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
         <AssistSidebarProvider>
           <AssistSidebarRouteListener />
           <AssistSidebarPanel />

@@ -3,11 +3,9 @@
 import { useMemo, useState } from 'react'
 
 import ClearableSelect from '@/components/ClearableSelect'
-import { useIsMobile } from '@/hooks/useMobile'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import MovieCard from './MovieCard'
-import MovieSwipeView from './MovieSwipeView'
 
 type SortOption = 'rating' | 'wish' | ''
 
@@ -15,11 +13,11 @@ interface MovieListProps {
   movies: MergedMovie[]
   favoriteAvailable: boolean
   favoriteIds: Set<number>
+  shareToken?: string
 }
 
-export default function MovieList({ movies, favoriteAvailable, favoriteIds }: MovieListProps) {
+export default function MovieList({ movies, favoriteAvailable, favoriteIds, shareToken }: MovieListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('')
-  const isMobile = useIsMobile()
 
   // Filter movies: only keep those with rating or wish data
   const filteredMovies = useMemo(() => {
@@ -62,12 +60,7 @@ export default function MovieList({ movies, favoriteAvailable, favoriteIds }: Mo
     )
   }
 
-  // Mobile swipe view
-  if (isMobile) {
-    return <MovieSwipeView movies={sortedMovies} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} />
-  }
-
-  // Desktop grid view
+  // Desktop grid view only (mobile is handled in MovieListMobile)
   return (
     <div className="space-y-6">
       {/* Sort Controls - Sticky */}
@@ -104,6 +97,7 @@ export default function MovieList({ movies, favoriteAvailable, favoriteIds }: Mo
             movie={movie}
             favoriteAvailable={favoriteAvailable}
             isFavorited={movie.tmdbId ? favoriteIds.has(movie.tmdbId) : false}
+            shareToken={shareToken}
           />
         ))}
       </div>

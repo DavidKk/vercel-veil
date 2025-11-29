@@ -1,251 +1,166 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Share2 } from 'feather-icons-react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { MergedMovie } from '@/services/maoyan/types'
 
+import ShareModal from './components/ShareModal'
+import MovieSwipeBackground from './MovieSwipeBackground'
 import MovieSwipeCard from './MovieSwipeCard'
 
 interface MovieSwipeViewProps {
   movies: MergedMovie[]
   favoriteAvailable: boolean
   favoriteIds: Set<number>
+  shareToken?: string
 }
 
-export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds }: MovieSwipeViewProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds, shareToken }: MovieSwipeViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const touchStartY = useRef<number>(0)
-  const touchStartTime = useRef<number>(0)
-  const translateY = useRef<number>(0)
-  const animationFrameRef = useRef<number | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const isAnimatingRef = useRef<boolean>(false)
-  const isDraggingRef = useRef<boolean>(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [scrollProgress, setScrollProgress] = useState(0) // 0-1, 0 = current, 1 = next
+  const [viewportHeight, setViewportHeight] = useState(0)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
-  // Handle touch start
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY
-    touchStartTime.current = Date.now()
-    isDraggingRef.current = true
-    if (containerRef.current) {
-      containerRef.current.style.transition = 'none'
-    }
-  }
-
-  // Handle mouse move (for macOS Safari) - using native event
-  const handleMouseMoveNativeRef = useRef<((e: MouseEvent) => void) | null>(null)
-  const handleMouseUpNativeRef = useRef<((e: MouseEvent) => void) | null>(null)
-
-  // Initialize mouse handlers - use useEffect to avoid stale closures
+  // Handle Chrome mobile bottom toolbar by using dynamic viewport height
   useEffect(() => {
-    handleMouseMoveNativeRef.current = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return
-      e.preventDefault()
-      handleMove(e.clientY)
+    const updateViewportHeight = () => {
+      // Use window.innerHeight which excludes browser UI (toolbars)
+      const vh = window.innerHeight
+      setViewportHeight(vh)
+
+      // Apply to wrapper and container
+      if (wrapperRef.current) {
+        wrapperRef.current.style.height = `${vh}px`
+      }
+      if (containerRef.current) {
+        containerRef.current.style.height = `${vh}px`
+      }
     }
 
-    handleMouseUpNativeRef.current = (e: MouseEvent) => {
-      e.preventDefault()
-      if (handleMouseMoveNativeRef.current) {
-        document.removeEventListener('mousemove', handleMouseMoveNativeRef.current)
-      }
-      if (handleMouseUpNativeRef.current) {
-        document.removeEventListener('mouseup', handleMouseUpNativeRef.current)
-      }
-      handleEnd(e.clientY)
-    }
-  }, [currentIndex, movies.length])
+    // Initial calculation
+    updateViewportHeight()
 
-  // Handle mouse down (for macOS Safari) - using native event
-  const handleMouseDownNative = useCallback((e: MouseEvent) => {
-    e.preventDefault()
-    touchStartY.current = e.clientY
-    touchStartTime.current = Date.now()
-    isDraggingRef.current = true
-    if (containerRef.current) {
-      containerRef.current.style.transition = 'none'
+    // Update on resize (handles Chrome toolbar show/hide)
+    window.addEventListener('resize', updateViewportHeight, { passive: true })
+    window.addEventListener('orientationchange', updateViewportHeight, { passive: true })
+
+    // Also listen to visualViewport API if available (better for Chrome)
+    const visualViewport = window.visualViewport
+    if (visualViewport) {
+      const handleViewportChange = () => {
+        updateViewportHeight()
+      }
+      visualViewport.addEventListener('resize', handleViewportChange)
+      visualViewport.addEventListener('scroll', handleViewportChange)
+
+      return () => {
+        window.removeEventListener('resize', updateViewportHeight)
+        window.removeEventListener('orientationchange', updateViewportHeight)
+        visualViewport.removeEventListener('resize', handleViewportChange)
+        visualViewport.removeEventListener('scroll', handleViewportChange)
+      }
     }
-    // Add native mouse move and up listeners
-    if (handleMouseMoveNativeRef.current) {
-      document.addEventListener('mousemove', handleMouseMoveNativeRef.current, { passive: false })
-    }
-    if (handleMouseUpNativeRef.current) {
-      document.addEventListener('mouseup', handleMouseUpNativeRef.current, { passive: false })
+
+    return () => {
+      window.removeEventListener('resize', updateViewportHeight)
+      window.removeEventListener('orientationchange', updateViewportHeight)
     }
   }, [])
 
-  // Handle touch/mouse move
-  const handleMove = (currentY: number) => {
-    if (!containerRef.current || isAnimatingRef.current || !isDraggingRef.current) return
-
-    const deltaY = currentY - touchStartY.current
-    translateY.current = deltaY
-
-    // Use requestAnimationFrame for smooth updates
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-    }
-
-    animationFrameRef.current = requestAnimationFrame(() => {
-      if (!containerRef.current) return
-
-      // Apply transform with bounds
-      const baseOffset = -currentIndex * 100
-      const dragOffset = (deltaY / window.innerHeight) * 100
-      const newOffset = baseOffset + dragOffset
-
-      // Limit drag range
-      const minOffset = -(movies.length - 1) * 100
-      const maxOffset = 0
-      const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset))
-
-      containerRef.current.style.transform = `translateY(${clampedOffset}%)`
-    })
-  }
-
-  // Handle touch move
-  const handleTouchMove = (e: React.TouchEvent) => {
-    handleMove(e.touches[0].clientY)
-  }
-
-  // Handle touch/mouse end
-  const handleEnd = (endY: number) => {
-    if (!containerRef.current || isAnimatingRef.current || !isDraggingRef.current) return
-
-    isDraggingRef.current = false
-
-    // Cancel any pending animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
-    }
-
-    const deltaY = endY - touchStartY.current
-    const deltaTime = Date.now() - touchStartTime.current
-    const velocity = deltaTime > 0 ? Math.abs(deltaY / deltaTime) : 0
-
-    const threshold = window.innerHeight * 0.15 // 15% of screen height
-    const velocityThreshold = 0.3 // pixels per millisecond
-
-    // Determine if should switch
-    let newIndex = currentIndex
-    if (Math.abs(deltaY) > threshold || velocity > velocityThreshold) {
-      if (deltaY > 0 && currentIndex > 0) {
-        // Swipe down - go to previous
-        newIndex = currentIndex - 1
-      } else if (deltaY < 0 && currentIndex < movies.length - 1) {
-        // Swipe up - go to next
-        newIndex = currentIndex + 1
-      }
-    }
-
-    // Prevent multiple animations
-    if (newIndex === currentIndex) {
-      // Reset to current position
-      containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-      containerRef.current.style.transform = `translateY(-${currentIndex * 100}%)`
-      return
-    }
-
-    // Animate to target
-    isAnimatingRef.current = true
-    setCurrentIndex(newIndex)
-    containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-    containerRef.current.style.transform = `translateY(-${newIndex * 100}%)`
-
-    // Clear previous timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-
-    // Reset after animation
-    timeoutRef.current = setTimeout(() => {
-      translateY.current = 0
-      isAnimatingRef.current = false
-      timeoutRef.current = null
-    }, 300)
-  }
-
-  // Handle touch end
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    handleEnd(e.changedTouches[0].clientY)
-  }
-
-  // Prevent scroll on body when swiping
+  // Prevent body scroll and ensure smooth scrolling
   useEffect(() => {
-    const preventScroll = (e: WheelEvent) => {
-      // Prevent scrolling when dragging
-      if (isDraggingRef.current) {
-        e.preventDefault()
-      }
-    }
-
+    const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    document.addEventListener('wheel', preventScroll, { passive: false })
 
     return () => {
-      document.body.style.overflow = ''
-      document.removeEventListener('wheel', preventScroll)
+      document.body.style.overflow = originalOverflow
     }
   }, [])
 
-  // Cleanup on unmount
+  // Calculate scroll progress for background transition
   useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-      // Cleanup native event listeners
-      if (handleMouseMoveNativeRef.current) {
-        document.removeEventListener('mousemove', handleMouseMoveNativeRef.current)
-      }
-      if (handleMouseUpNativeRef.current) {
-        document.removeEventListener('mouseup', handleMouseUpNativeRef.current)
-      }
+    const container = containerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop
+      const vh = viewportHeight || window.innerHeight
+      const currentScrollIndex = scrollTop / vh
+      const currentIdx = Math.floor(currentScrollIndex)
+      const progress = currentScrollIndex - currentIdx
+
+      setCurrentIndex(currentIdx)
+      setScrollProgress(progress)
     }
-  }, [])
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Initial calculation
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+    }
+  }, [movies, viewportHeight])
+
+  // Get poster URLs for current and next movie
+  const currentMovie = movies[currentIndex]
+  const nextMovie = movies[currentIndex + 1]
+  const currentPosterUrl = currentMovie?.tmdbPoster || currentMovie?.poster || null
+  const nextPosterUrl = nextMovie?.tmdbPoster || nextMovie?.poster || null
 
   if (!movies || movies.length === 0) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-black">
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-900">No movies available</p>
-          <p className="mt-2 text-sm text-gray-600">Please try again later</p>
+          <p className="text-lg font-semibold text-white">No movies available</p>
+          <p className="mt-2 text-sm text-gray-400">Please try again later</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-black touch-none">
+    <div ref={wrapperRef} className="fixed inset-0 bg-black" style={{ height: viewportHeight || '100dvh' }}>
+      {/* Background component with fade transition */}
+      <MovieSwipeBackground currentPosterUrl={currentPosterUrl} nextPosterUrl={nextPosterUrl} scrollProgress={scrollProgress} />
+
+      {/* Share button - top right corner (hidden on share page) */}
+      {!shareToken && (
+        <button
+          onClick={() => setIsShareModalOpen(true)}
+          className="fixed top-3 right-3 z-20 flex items-center justify-center rounded-full bg-white/20 p-2.5 backdrop-blur-md transition-all hover:bg-white/30 active:scale-95 shadow-lg"
+          title="Share movie list"
+        >
+          <Share2 size={16} className="text-white" />
+        </button>
+      )}
+
       <div
         ref={containerRef}
-        className="h-full w-full select-none"
-        style={{ transform: `translateY(-${currentIndex * 100}%)` }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={(e) => {
-          e.preventDefault()
-          handleMouseDownNative(e.nativeEvent)
-        }}
-        onMouseLeave={() => {
-          if (isDraggingRef.current && handleMouseUpNativeRef.current) {
-            const syntheticEvent = new MouseEvent('mouseup', { bubbles: true, cancelable: true })
-            handleMouseUpNativeRef.current(syntheticEvent)
-          }
+        className="relative h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-10"
+        style={{
+          height: viewportHeight || '100dvh',
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          scrollSnapType: 'y mandatory',
         }}
       >
-        {movies.map((movie, index) => (
-          <div key={`${movie.source}-${movie.maoyanId}`} className="absolute h-screen w-full" style={{ top: `${index * 100}%` }}>
-            <MovieSwipeCard movie={movie} favoriteAvailable={favoriteAvailable} isFavorited={movie.tmdbId ? favoriteIds.has(movie.tmdbId) : false} />
-          </div>
-        ))}
+        {movies.map((movie) => {
+          // Mobile swipe view: load all images immediately (no lazy loading)
+          const isFavorited = movie.tmdbId ? favoriteIds.has(movie.tmdbId) : false
+          return (
+            <div key={`${movie.source}-${movie.maoyanId}`} className="relative w-full snap-start snap-always flex-shrink-0" style={{ height: viewportHeight || '100dvh' }}>
+              <MovieSwipeCard movie={movie} favoriteAvailable={favoriteAvailable} isFavorited={isFavorited} shareToken={shareToken} />
+            </div>
+          )
+        })}
       </div>
+
+      {/* Share Modal */}
+      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
     </div>
   )
 }

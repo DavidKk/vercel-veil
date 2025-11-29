@@ -1,7 +1,7 @@
 import { fetchJsonWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 import type { TMDBMovie } from '@/services/tmdb'
-import { fetchNowPlayingMovies, fetchPopularMovies, fetchUpcomingMovies, getGenreNames, getMovieDetails, getMovieGenres, searchMulti } from '@/services/tmdb'
+import { fetchPopularMovies, fetchUpcomingMovies, getGenreNames, getMovieDetails, getMovieGenres, searchMulti } from '@/services/tmdb'
 import { hasTmdbApiKey } from '@/services/tmdb/env'
 
 import { MAOYAN, MAOYAN_CACHE } from './constants'
@@ -310,6 +310,17 @@ async function convertTMDBMovieToMergedMovie(tmdbMovie: TMDBMovie, source: 'tmdb
 }
 
 /**
+ * Generate Maoyan movie URL from movie ID
+ */
+function getMaoyanUrl(maoyanId: number | string): string | undefined {
+  // Only generate URL if maoyanId is a number (not a string like "tmdb-123")
+  if (typeof maoyanId === 'number') {
+    return `https://maoyan.com/films/${maoyanId}`
+  }
+  return undefined
+}
+
+/**
  * Normalize movie title for matching (remove punctuation, normalize spaces)
  */
 function normalizeTitle(title: string): string {
@@ -450,6 +461,7 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
       score: movie.score,
       source: 'topRated',
       sources: ['topRated'],
+      maoyanUrl: getMaoyanUrl(movie.movieId),
     })
   }
 
@@ -465,6 +477,10 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
       if (!existing.wish && movie.wish) {
         existing.wish = movie.wish
       }
+      // Ensure maoyanUrl is set if not already present
+      if (!existing.maoyanUrl) {
+        existing.maoyanUrl = getMaoyanUrl(movie.id)
+      }
     } else {
       movieMap.set(key, {
         maoyanId: movie.id,
@@ -473,6 +489,7 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
         wish: movie.wish,
         source: 'mostExpected',
         sources: ['mostExpected'],
+        maoyanUrl: getMaoyanUrl(movie.id),
       })
     }
   }
@@ -487,13 +504,10 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
       tmdbPromises.push(fetchPopularMovies({ language: 'zh-CN', page: 1 }))
     }
 
-    // Merge upcoming and now playing into one list
+    // Fetch upcoming movies
     if (includeTMDBUpcoming) {
-      // TMDB's /movie/upcoming API returns movies scheduled to be released in the next 4 weeks (28 days)
-      // TMDB's /movie/now_playing API returns movies currently in theaters
-      // We merge both into "upcoming" list, with now playing movies filtered by rating >= 7.0
+      // TMDB's upcoming movies API returns movies scheduled to be released in the next month (30 days)
       tmdbPromises.push(fetchUpcomingMovies({ language: 'zh-CN', page: 1 }))
-      tmdbPromises.push(fetchNowPlayingMovies({ language: 'zh-CN', page: 1 }))
     }
 
     // Build a map of TMDB movies by title for efficient lookup
@@ -547,33 +561,6 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
           }
         } else if (upcomingResult?.status === 'rejected') {
           fail('TMDB upcoming movies request failed:', upcomingResult.reason)
-        }
-        tmdbIndex++
-
-        // Merge now playing movies (filtered by rating >= 7.0)
-        const nowPlayingResult = tmdbResults[tmdbIndex]
-        if (nowPlayingResult?.status === 'fulfilled') {
-          const movies = nowPlayingResult.value
-          if (movies && movies.length > 0) {
-            const filteredMovies = movies.filter((movie) => (movie.vote_average || 0) >= 7.0)
-            if (filteredMovies.length > 0) {
-              await mergeTMDBMovies(movieMap, filteredMovies, 'tmdbUpcoming', true)
-              // Add to title map for efficient lookup during enrichment
-              for (const movie of filteredMovies) {
-                const key = movie.title.toLowerCase().trim()
-                if (!tmdbTitleMap.has(key)) {
-                  tmdbTitleMap.set(key, movie)
-                }
-              }
-              info(`Merged ${filteredMovies.length} now playing movies from TMDB (filtered from ${movies.length} total, rating >= 7.0)`)
-            } else {
-              warn(`No now playing movies with rating >= 7.0 (from ${movies.length} total)`)
-            }
-          } else {
-            warn('TMDB now playing movies returned empty array')
-          }
-        } else if (nowPlayingResult?.status === 'rejected') {
-          fail('TMDB now playing movies request failed:', nowPlayingResult.reason)
         }
       }
     }

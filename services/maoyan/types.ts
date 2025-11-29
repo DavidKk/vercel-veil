@@ -50,6 +50,7 @@ export interface MergedMovie {
   wish?: number
   source: 'topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming'
   sources: ('topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming')[] // 可能同时出现在多个列表中
+  maoyanUrl?: string // 猫眼电影详情页URL
 
   // TMDB 数据（通过搜索获取）
   tmdbId?: number
