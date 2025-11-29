@@ -3,9 +3,11 @@
 import { useMemo, useState } from 'react'
 
 import ClearableSelect from '@/components/ClearableSelect'
+import { useIsMobile } from '@/hooks/useMobile'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import MovieCard from './MovieCard'
+import MovieSwipeView from './MovieSwipeView'
 
 type SortOption = 'rating' | 'wish' | ''
 
@@ -17,6 +19,7 @@ interface MovieListProps {
 
 export default function MovieList({ movies, favoriteAvailable, favoriteIds }: MovieListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('')
+  const isMobile = useIsMobile()
 
   // Filter movies: only keep those with rating or wish data
   const filteredMovies = useMemo(() => {
@@ -59,16 +62,22 @@ export default function MovieList({ movies, favoriteAvailable, favoriteIds }: Mo
     )
   }
 
+  // Mobile swipe view
+  if (isMobile) {
+    return <MovieSwipeView movies={sortedMovies} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} />
+  }
+
+  // Desktop grid view
   return (
     <div className="space-y-6">
       {/* Sort Controls - Sticky */}
-      <div className="sticky top-2 z-10">
+      <div className="hidden md:block sticky top-2 z-10">
         <div className="rounded-xl border border-gray-200/80 bg-white/95 backdrop-blur-md px-4 py-3 shadow-md ring-1 ring-gray-200/50">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="hidden sm:block text-sm text-gray-600">
               Showing <span className="font-semibold text-gray-900">{sortedMovies.length}</span> movies
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start">
               <label htmlFor="sort-select" className="text-sm font-medium text-gray-700">
                 Sort by:
               </label>
