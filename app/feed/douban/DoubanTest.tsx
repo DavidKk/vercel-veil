@@ -5,8 +5,12 @@ import { useRef, useState } from 'react'
 
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
+import { AssistSidebarTrigger, useAssistSidebarContent } from '@/components/AssistSidebar'
 import SearchableSelect from '@/components/SearchableSelect'
 import { Spinner } from '@/components/Spinner'
+
+import overviewDoc from './docs/overview.md?raw'
+import usageDoc from './docs/usage.md?raw'
 
 type FeedType = 'sonarr' | 'radarr'
 
@@ -17,6 +21,11 @@ interface TestResult {
 }
 
 export default function DoubanTest() {
+  useAssistSidebarContent('douban', [
+    { key: 'overview', title: 'Overview', markdown: overviewDoc },
+    { key: 'usage', title: 'Usage Guide', markdown: usageDoc },
+  ])
+
   const [url, setUrl] = useState('')
   const [feedType, setFeedType] = useState<FeedType>('sonarr')
   const [result, setResult] = useState<TestResult | null>(null)
@@ -56,13 +65,16 @@ export default function DoubanTest() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+    <div className="flex min-h-[calc(100vh-64px-60px)] flex-col bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto w-full max-w-5xl">
         {/* Header Section */}
         <div className="mb-8 flex flex-col gap-3 border-b border-gray-200 pb-6">
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-bold text-gray-900">Douban RSS Feed Tester</h1>
             <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">Beta</span>
+            <div className="ml-auto">
+              <AssistSidebarTrigger contentKey="douban" />
+            </div>
           </div>
           <p className="text-sm leading-relaxed text-gray-500">
             Convert and test Douban RSS feeds for seamless integration with <span className="font-medium text-gray-700">Sonarr</span> and{' '}

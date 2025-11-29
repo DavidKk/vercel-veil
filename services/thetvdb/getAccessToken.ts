@@ -1,5 +1,4 @@
 import { fail, info } from '@/services/logger'
-import { request } from '@/services/request'
 import { getTheTvdbApiKey } from '@/services/thetvdb/env'
 
 import { TOKEN_EXPIRATION_TIME, TVDB_API_BASE_URL } from './conf'
@@ -27,7 +26,14 @@ export async function getAccessToken(): Promise<string> {
     info('Fetching new TVDB token')
     const body = JSON.stringify({ apikey: apiKey })
 
-    tokenPromise = request('POST', `${TVDB_API_BASE_URL}/login`, { body })
+    tokenPromise = fetch(`${TVDB_API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+      },
+      body,
+    })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`Failed to fetch TVDB token: ${response.statusText}`)

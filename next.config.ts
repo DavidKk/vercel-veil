@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.module.rules.push({
       test: /\.md$/,
+      resourceQuery: /raw/,
       use: 'raw-loader',
     })
     config.module.rules.push({

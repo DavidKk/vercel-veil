@@ -2,8 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+import { AssistSidebarTrigger, useAssistSidebarContent } from '@/components/AssistSidebar'
+
 import { TemplatePreviewPane } from './components/TemplatePreviewPane'
 import { TemplateToolbar } from './components/TemplateToolbar'
+import overviewDoc from './docs/overview.md?raw'
+import usageDoc from './docs/usage.md?raw'
 import type { TemplatePreviewerProps } from './types'
 
 function toBase64(value: string) {
@@ -21,6 +25,11 @@ interface ParseResult {
 }
 
 export function Prview({ templates }: TemplatePreviewerProps) {
+  useAssistSidebarContent('templates', [
+    { key: 'overview', title: 'Overview', markdown: overviewDoc },
+    { key: 'usage', title: 'Usage Guide', markdown: usageDoc },
+  ])
+
   const [selectedId, setSelectedId] = useState(() => templates[0]?.id ?? '')
   const [jsonInput, setJsonInput] = useState(() => JSON.stringify(templates[0]?.defaultVariables ?? {}, null, 2))
   const [sending, setSending] = useState(false)
@@ -100,6 +109,9 @@ export function Prview({ templates }: TemplatePreviewerProps) {
     <>
       <aside className="flex w-full flex-col border-r border-gray-200 bg-gray-50 overflow-y-auto xl:w-80 xl:flex-shrink-0">
         <div className="flex h-full flex-col p-6">
+          <div className="mb-4 flex justify-end">
+            <AssistSidebarTrigger contentKey="templates" />
+          </div>
           <TemplateToolbar
             templates={templates}
             selectedId={selectedId}

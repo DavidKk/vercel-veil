@@ -1,5 +1,4 @@
 import { fail, info } from '@/services/logger'
-import { request } from '@/services/request'
 
 import { TVDB_API_BASE_URL } from './conf'
 import { getAccessToken } from './getAccessToken'
@@ -34,7 +33,7 @@ export async function searchByTitle(title: string, options: SearchOptions = {}):
 
   try {
     info(`TVDB search start: ${title}`)
-    const response = await request('GET', url.toString(), { headers })
+    const response = await fetch(url.toString(), { headers })
     if (!response.ok) {
       fail(`TVDB search failed "${title}" status=${response.status} ${response.statusText}`)
       return null

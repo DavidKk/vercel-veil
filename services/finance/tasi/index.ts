@@ -1,4 +1,4 @@
-import { request } from '@/services/request'
+import { fetchWithCache } from '@/services/fetch'
 
 import { DAILY_REPORT_HEADERS, DAILY_REPORT_URL } from './constants'
 import { parseTasiCompaniesDaily } from './parseTasiCompaniesDaily'
@@ -14,18 +14,14 @@ export async function fetchTasiMarketSummary() {
   return parseTasiMarketSummary(htmlContent)
 }
 
+const textDecoder = new TextDecoder()
+
 async function fetchDailyReport() {
-  // Increase timeout to 60 seconds for external API calls
-  const response = await request('GET', DAILY_REPORT_URL, {
-    headers: {
-      ...DAILY_REPORT_HEADERS,
-    },
-    timeout: 60_000, // 60 seconds
+  // TASI 数据更新频率较低，使用缓存减少重复抓取
+  const buffer = await fetchWithCache(DAILY_REPORT_URL, {
+    headers: DAILY_REPORT_HEADERS,
+    cacheDuration: 5 * 60 * 1000, // 5 分钟缓存
   })
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch TASI report')
-  }
-
-  return response.text()
+  return textDecoder.decode(buffer)
 }

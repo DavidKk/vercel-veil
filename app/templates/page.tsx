@@ -8,7 +8,7 @@ export default async function TemplatesPage() {
   const templates = listTemplates()
 
   return (
-    <div className="flex h-[calc(100vh-60px-64px)] overflow-hidden">
+    <div className="flex min-h-[calc(100vh-64px-60px)] overflow-hidden">
       <Prview templates={templates} />
     </div>
   )

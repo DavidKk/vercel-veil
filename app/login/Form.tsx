@@ -64,7 +64,7 @@ export default function LoginForm(props: LoginFormProps) {
   }, [username, password, access2FAToken])
 
   return (
-    <div className="flex justify-center pt-[20vh] h-screen bg-gray-100 pt-12">
+    <div className="flex min-h-[calc(100vh-64px-60px)] justify-center bg-gray-100 pt-12">
       <form onSubmit={handleSubmit} className="w-full max-w-lg flex flex-col items-center gap-4 p-4">
         <h1 className="text-2xl">Login</h1>
 

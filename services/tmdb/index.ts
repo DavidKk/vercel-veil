@@ -1,5 +1,4 @@
 import { fail, info, warn } from '@/services/logger'
-import { request } from '@/services/request'
 import { getTmdbApiKey } from '@/services/tmdb/env'
 
 import { TMDB_API_BASE_URL } from './conf'
@@ -38,7 +37,11 @@ export async function searchMulti(title: string, options: SearchOptions = {}): P
     }
 
     const apiUrl = `${TMDB_API_BASE_URL}/search/multi?${params.toString()}`
-    const response = await request('GET', apiUrl)
+    const response = await fetch(apiUrl, {
+      headers: {
+        accept: 'application/json',
+      },
+    })
 
     if (!response.ok) {
       fail(`TMDB search failed "${title}" status=${response.status} ${response.statusText}`)

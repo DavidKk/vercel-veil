@@ -11,7 +11,7 @@ export { generateMetadata }
 
 export default function Home() {
   return (
-    <div className="flex h-[calc(100vh-64px-60px)] items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100vh-64px-60px)] items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-2xl">
         <div className="rounded-2xl bg-white p-8 shadow-xl ring-1 ring-gray-200 sm:p-12">
           {/* Title */}
