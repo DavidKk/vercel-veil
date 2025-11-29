@@ -14,17 +14,18 @@ interface MovieSwipeViewProps {
 
 export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds }: MovieSwipeViewProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const touchStartY = useRef<number>(0)
   const touchStartTime = useRef<number>(0)
   const translateY = useRef<number>(0)
+  const animationFrameRef = useRef<number | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isAnimatingRef = useRef<boolean>(false)
 
   // Handle touch start
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
     touchStartTime.current = Date.now()
-    setIsTransitioning(false)
     if (containerRef.current) {
       containerRef.current.style.transition = 'none'
     }
@@ -32,29 +33,44 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
 
   // Handle touch move
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!containerRef.current) return
+    if (!containerRef.current || isAnimatingRef.current) return
 
     e.preventDefault() // Prevent scrolling
     const currentY = e.touches[0].clientY
     const deltaY = currentY - touchStartY.current
     translateY.current = deltaY
 
-    // Apply transform with bounds
-    const baseOffset = -currentIndex * 100
-    const dragOffset = (deltaY / window.innerHeight) * 100
-    const newOffset = baseOffset + dragOffset
+    // Use requestAnimationFrame for smooth updates
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
 
-    // Limit drag range
-    const minOffset = -(movies.length - 1) * 100
-    const maxOffset = 0
-    const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset))
+    animationFrameRef.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return
 
-    containerRef.current.style.transform = `translateY(${clampedOffset}%)`
+      // Apply transform with bounds
+      const baseOffset = -currentIndex * 100
+      const dragOffset = (deltaY / window.innerHeight) * 100
+      const newOffset = baseOffset + dragOffset
+
+      // Limit drag range
+      const minOffset = -(movies.length - 1) * 100
+      const maxOffset = 0
+      const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset))
+
+      containerRef.current.style.transform = `translateY(${clampedOffset}%)`
+    })
   }
 
   // Handle touch end
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!containerRef.current) return
+    if (!containerRef.current || isAnimatingRef.current) return
+
+    // Cancel any pending animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
 
     const touchEndY = e.changedTouches[0].clientY
     const deltaY = touchEndY - touchStartY.current
@@ -76,30 +92,50 @@ export default function MovieSwipeView({ movies, favoriteAvailable, favoriteIds 
       }
     }
 
+    // Prevent multiple animations
+    if (newIndex === currentIndex) {
+      // Reset to current position
+      containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      containerRef.current.style.transform = `translateY(-${currentIndex * 100}%)`
+      return
+    }
+
     // Animate to target
-    setIsTransitioning(true)
+    isAnimatingRef.current = true
     setCurrentIndex(newIndex)
     containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
     containerRef.current.style.transform = `translateY(-${newIndex * 100}%)`
 
+    // Clear previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
     // Reset after animation
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       translateY.current = 0
+      isAnimatingRef.current = false
+      timeoutRef.current = null
     }, 300)
   }
-
-  // Reset transform on index change
-  useEffect(() => {
-    if (containerRef.current && isTransitioning) {
-      containerRef.current.style.transform = `translateY(-${currentIndex * 100}%)`
-    }
-  }, [currentIndex, isTransitioning])
 
   // Prevent scroll on body when swiping
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = ''
+    }
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
     }
   }, [])
 
