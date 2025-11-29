@@ -20,47 +20,42 @@ export const runtime = 'nodejs'
  * @returns Response with status 202 on success
  */
 export const POST = api(async (req: NextRequest) => {
-  try {
-    await ensureProwlarrAuthorized(req)
+  await ensureProwlarrAuthorized(req)
 
-    const payload = (await req.json()) as ProwlarrWebhookPayload
+  const payload = (await req.json()) as ProwlarrWebhookPayload
 
-    if (!isProwlarrPayload(payload)) {
-      fail('Invalid Prowlarr payload structure')
-      return jsonInvalidParameters('unsupported payload structure')
-    }
+  if (!isProwlarrPayload(payload)) {
+    fail('Invalid Prowlarr payload structure')
+    return jsonInvalidParameters('unsupported payload structure')
+  }
 
-    const variables = await prepareProwlarrTemplateVariables(payload)
+  const variables = await prepareProwlarrTemplateVariables(payload)
 
-    const template = getTemplate('prowlarr-default')
-    if (!template) {
-      fail('Template not found: prowlarr-default')
-      return jsonInvalidParameters('template not found')
-    }
+  const template = getTemplate('prowlarr-default')
+  if (!template) {
+    fail('Template not found: prowlarr-default')
+    return jsonInvalidParameters('template not found')
+  }
 
-    const templateVariables: Record<string, string> = {
-      indexerName: variables.indexerName,
-      eventType: variables.eventType,
-      actionLabel: variables.actionLabel,
-      instanceName: variables.instanceName,
-      protocol: variables.protocol,
-      statusChange: variables.statusChange,
-      message: variables.message,
-      indexerDetails: variables.indexerDetails,
-      applicationUrl: variables.applicationUrl,
-    }
+  const templateVariables: Record<string, string> = {
+    indexerName: variables.indexerName,
+    eventType: variables.eventType,
+    actionLabel: variables.actionLabel,
+    instanceName: variables.instanceName,
+    protocol: variables.protocol,
+    statusChange: variables.statusChange,
+    message: variables.message,
+    indexerDetails: variables.indexerDetails,
+    applicationUrl: variables.applicationUrl,
+  }
 
-    const html = renderTemplate(template.html, templateVariables)
-    const subject = `[Prowlarr][${variables.eventType}] ${variables.indexerName}`
+  const html = renderTemplate(template.html, templateVariables)
+  const subject = `[Prowlarr][${variables.eventType}] ${variables.indexerName}`
 
-    await sendNotification(subject, html)
+  await sendNotification(subject, html)
 
-    return {
-      ...standardResponseSuccess({ source: 'prowlarr', eventType: payload.eventType }),
-      status: 202,
-    }
-  } catch (error) {
-    fail('POST /api/webhooks/prowlarr - Error:', error)
-    throw error
+  return {
+    ...standardResponseSuccess({ source: 'prowlarr', eventType: payload.eventType }),
+    status: 202,
   }
 })

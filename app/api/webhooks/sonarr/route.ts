@@ -21,50 +21,45 @@ export const runtime = 'nodejs'
  * @returns Response with status 202 on success
  */
 export const POST = api(async (req: NextRequest) => {
-  try {
-    await ensureWebhookAuthorized(req)
+  await ensureWebhookAuthorized(req)
 
-    const payload = (await req.json()) as SonarrWebhookPayload
+  const payload = (await req.json()) as SonarrWebhookPayload
 
-    if (!isSonarrPayload(payload)) {
-      fail('Invalid Sonarr payload structure')
-      return jsonInvalidParameters('unsupported payload structure')
-    }
+  if (!isSonarrPayload(payload)) {
+    fail('Invalid Sonarr payload structure')
+    return jsonInvalidParameters('unsupported payload structure')
+  }
 
-    const preferredTitle = await resolvePreferredTitle({ defaultTitle: payload.series?.title, mediaType: 'series' })
-    const variables = await prepareSonarrTemplateVariables(payload, preferredTitle)
+  const preferredTitle = await resolvePreferredTitle({ defaultTitle: payload.series?.title, mediaType: 'series' })
+  const variables = await prepareSonarrTemplateVariables(payload, preferredTitle)
 
-    const template = getTemplate('sonarr-default')
-    if (!template) {
-      fail('Template not found: sonarr-default')
-      return jsonInvalidParameters('template not found')
-    }
+  const template = getTemplate('sonarr-default')
+  if (!template) {
+    fail('Template not found: sonarr-default')
+    return jsonInvalidParameters('template not found')
+  }
 
-    const templateVariables: Record<string, string> = {
-      seriesTitle: variables.seriesTitle,
-      eventType: variables.eventType,
-      actionLabel: variables.actionLabel,
-      instanceName: variables.instanceName,
-      downloadClient: variables.downloadClient,
-      isUpgrade: variables.isUpgrade,
-      episodeList: variables.episodeList,
-      releaseDetails: variables.releaseDetails,
-      coverImage: variables.coverImage,
-      synopsis: variables.synopsis,
-      detailUrl: variables.detailUrl,
-    }
+  const templateVariables: Record<string, string> = {
+    seriesTitle: variables.seriesTitle,
+    eventType: variables.eventType,
+    actionLabel: variables.actionLabel,
+    instanceName: variables.instanceName,
+    downloadClient: variables.downloadClient,
+    isUpgrade: variables.isUpgrade,
+    episodeList: variables.episodeList,
+    releaseDetails: variables.releaseDetails,
+    coverImage: variables.coverImage,
+    synopsis: variables.synopsis,
+    detailUrl: variables.detailUrl,
+  }
 
-    const html = renderTemplate(template.html, templateVariables)
-    const subject = `[Sonarr][${variables.eventType}] ${variables.seriesTitle}`
+  const html = renderTemplate(template.html, templateVariables)
+  const subject = `[Sonarr][${variables.eventType}] ${variables.seriesTitle}`
 
-    await sendNotification(subject, html)
+  await sendNotification(subject, html)
 
-    return {
-      ...standardResponseSuccess({ source: 'sonarr', eventType: payload.eventType }),
-      status: 202,
-    }
-  } catch (error) {
-    fail('POST /api/webhooks/sonarr - Error:', error)
-    throw error
+  return {
+    ...standardResponseSuccess({ source: 'sonarr', eventType: payload.eventType }),
+    status: 202,
   }
 })

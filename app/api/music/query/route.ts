@@ -9,27 +9,22 @@ import { ensureApiAuthorized } from '@/utils/webhooks/auth'
 export const runtime = 'nodejs'
 
 export const GET = api(async (req: NextRequest) => {
-  try {
-    await ensureApiAuthorized(req)
+  await ensureApiAuthorized(req)
 
-    const { searchParams } = new URL(req.url)
-    const query = searchParams.get('q')
+  const { searchParams } = new URL(req.url)
+  const query = searchParams.get('q')
 
-    if (typeof query !== 'string' || query.trim().length === 0) {
-      fail('Invalid query parameter')
-      return jsonInvalidParameters('query parameter (q) is required and must be a non-empty string')
-    }
-
-    const results = await search(query.trim())
-
-    return jsonSuccess(results, {
-      headers: new Headers({
-        'Content-Type': 'application/json;charset=UTF-8',
-        'Access-Control-Allow-Origin': '*',
-      }),
-    })
-  } catch (error) {
-    fail('GET /api/music/query - Error:', error)
-    throw error
+  if (typeof query !== 'string' || query.trim().length === 0) {
+    fail('Invalid query parameter')
+    return jsonInvalidParameters('query parameter (q) is required and must be a non-empty string')
   }
+
+  const results = await search(query.trim())
+
+  return jsonSuccess(results, {
+    headers: new Headers({
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Access-Control-Allow-Origin': '*',
+    }),
+  })
 })
