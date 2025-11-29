@@ -129,7 +129,7 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
         </div>
 
         {/* Bottom section - Action buttons */}
-        <div className="flex gap-2 sm:gap-3 flex-shrink-0 mt-auto px-4 sm:px-6 pb-2 sm:pb-3">
+        <div className="flex gap-2 sm:gap-3 flex-shrink-0 mt-auto px-4 sm:px-6 pb-2 sm:pb-3" style={{ paddingBottom: `max(0.5rem, env(safe-area-inset-bottom))` }}>
           {movie.tmdbUrl && (
             <a
               href={movie.tmdbUrl}
