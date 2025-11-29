@@ -2,12 +2,20 @@
 
 `vercel-veil` 需要若干环境变量来驱动 Webhook 鉴权、邮件通知以及调试辅助。下表按功能分类列出。
 
-## Webhook 鉴权
+## API 鉴权
 
-| 变量                   | 必填 | 描述                                                           | 示例                 |
-| ---------------------- | ---- | -------------------------------------------------------------- | -------------------- |
-| `WEBHOOK_TOKEN_SECRET` | 是   | Sonarr/Radarr Webhook 在 Header 中携带的令牌值，用于服务端校验 | `super-secret-token` |
-| `WEBHOOK_TOKEN_HEADER` | 否   | Webhook Token 所在的 Header 名称，默认 `x-vv-token`            | `x-custom-token`     |
+| 变量               | 必填 | 描述                                                                    | 示例                 |
+| ------------------ | ---- | ----------------------------------------------------------------------- | -------------------- |
+| `API_USERNAME`     | 是   | API 用户名，用于 Basic Authentication                                   | `api_user`           |
+| `API_PASSWORD`     | 是   | API 密码，用于 Basic Authentication                                     | `secure_password`    |
+| `API_TOKEN_SECRET` | 否   | API Token 值，用于 Header Token 认证（可选，但 Sonarr/Radarr 推荐使用） | `super-secret-token` |
+| `API_TOKEN_HEADER` | 否   | API Token 所在的 Header 名称，默认 `x-vv-token`                         | `x-custom-token`     |
+
+**认证方式说明**：
+
+- **API 接口**（如 `/api/music/*`, `/api/feed/*`）：支持 Cookie、Header Token 或 Basic Auth
+- **Sonarr/Radarr Webhook**：需要 Basic Auth（用户名密码），如果配置了 `API_TOKEN_SECRET` 则同时需要 Header Token
+- **Prowlarr Webhook**：只需要 Basic Auth（用户名密码），不支持 Header Token
 
 ## 邮件通知（Resend）
 

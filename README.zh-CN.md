@@ -6,8 +6,8 @@
 
 ## 功能特性
 
-- **Token 保护的 API**：所有外部接口都需要自定义 Header Token 以确保安全访问。
-- **Sonarr/Radarr Webhook 支持**：专用端点（`POST /api/webhooks/sonarr` 和 `POST /api/webhooks/radarr`）接收来自 Sonarr 和 Radarr 的原生 Webhook JSON。
+- **灵活的 API 认证**：所有外部接口支持 Cookie、Header Token 或 Basic Auth（用户名密码）
+- **Sonarr/Radarr/Prowlarr Webhook 支持**：专用端点接收原生 Webhook JSON，支持灵活的认证方式
 - **基于模板的邮件通知**：使用可自定义的 HTML 邮件模板，通过 Resend 发送格式丰富的通知。
 - **元数据增强**：可选集成 TMDB / TheTVDB，获取电影和剧集的封面图片、简介和本地化标题。
 - **模板管理界面**：内置 Web 界面，用于预览和测试邮件模板，支持实时变量替换。
@@ -21,18 +21,21 @@
    ```
 2. **配置环境变量**
    - 邮件：`RESEND_API_KEY`, `NOTIFICATION_EMAIL_FROM`, `NOTIFICATION_EMAIL_TO`
-   - 安全：`WEBHOOK_TOKEN_SECRET`（可选：`WEBHOOK_TOKEN_HEADER`，默认 `x-vv-token`）
+   - 安全：`API_USERNAME`, `API_PASSWORD`（必需），`API_TOKEN_SECRET`（可选），`API_TOKEN_HEADER`（可选，默认 `x-vv-token`）
    - 元数据（可选）：`TMDB_API_KEY` / `THE_TVDB_API_KEY` 及语言偏好设置
    - 详见 [`docs/ENVIRONMENT_VARIABLES.md`](./docs/ENVIRONMENT_VARIABLES.md)
 3. **本地开发**
    ```bash
    pnpm dev
    ```
-4. **配置 Sonarr/Radarr Webhook**
-   - Sonarr：`https://<your-deployment>/api/webhooks/sonarr`
-   - Radarr：`https://<your-deployment>/api/webhooks/radarr`
-   - Method：`POST`
-   - HTTP Header：`<WEBHOOK_TOKEN_HEADER>: <WEBHOOK_TOKEN_SECRET>`
+4. **配置 Webhook**
+   - Sonarr/Radarr：`https://<your-deployment>/api/webhooks/sonarr` 或 `/api/webhooks/radarr`
+     - Method：`POST`
+     - Basic Auth：用户名/密码（必需）
+     - HTTP Header：`<API_TOKEN_HEADER>: <API_TOKEN_SECRET>`（如果配置了 `API_TOKEN_SECRET` 则必需）
+   - Prowlarr：`https://<your-deployment>/api/webhooks/prowlarr`
+     - Method：`POST`
+     - Basic Auth：用户名/密码（必需）
 
 ## API
 
@@ -40,7 +43,7 @@
 
 | 项目   | 说明                                                      |
 | ------ | --------------------------------------------------------- |
-| 鉴权   | Header Token                                              |
+| 鉴权   | Basic Auth（用户名密码）+ Header Token（如果已配置）      |
 | 请求体 | 原生 Sonarr Webhook JSON                                  |
 | 行为   | 使用模板渲染邮件并通过 Resend 发送                        |
 | 返回   | `{ code: 0, message: 'ok', data: { source, eventType } }` |
@@ -49,8 +52,17 @@
 
 | 项目   | 说明                                                      |
 | ------ | --------------------------------------------------------- |
-| 鉴权   | Header Token                                              |
+| 鉴权   | Basic Auth（用户名密码）+ Header Token（如果已配置）      |
 | 请求体 | 原生 Radarr Webhook JSON                                  |
+| 行为   | 使用模板渲染邮件并通过 Resend 发送                        |
+| 返回   | `{ code: 0, message: 'ok', data: { source, eventType } }` |
+
+### `POST /api/webhooks/prowlarr`
+
+| 项目   | 说明                                                      |
+| ------ | --------------------------------------------------------- |
+| 鉴权   | Basic Auth（用户名密码）                                  |
+| 请求体 | 原生 Prowlarr Webhook JSON                                |
 | 行为   | 使用模板渲染邮件并通过 Resend 发送                        |
 | 返回   | `{ code: 0, message: 'ok', data: { source, eventType } }` |
 

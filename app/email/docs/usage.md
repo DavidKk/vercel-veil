@@ -43,10 +43,13 @@
    - **On Series Delete**: ✗ (optional)
    - **On Episode File Delete**: ✗ (optional)
    - **On Health Issue**: ✗ (optional)
-4. Add Custom Header:
-   - **Name**: `x-vv-token`
-   - **Value**: Your `WEBHOOK_TOKEN_SECRET` value
-5. Save the webhook
+4. Add Basic Authentication:
+   - **Username**: Your `API_USERNAME` value
+   - **Password**: Your `API_PASSWORD` value
+5. Add Custom Header (optional but recommended):
+   - **Name**: `x-vv-token` (or your `API_TOKEN_HEADER` value)
+   - **Value**: Your `API_TOKEN_SECRET` value
+6. Save the webhook
 
 ### Configuring Radarr Webhook
 
@@ -62,10 +65,13 @@
    - **On Rename**: ✗ (optional)
    - **On Movie Delete**: ✗ (optional)
    - **On Health Issue**: ✗ (optional)
-4. Add Custom Header:
-   - **Name**: `x-vv-token`
-   - **Value**: Your `WEBHOOK_TOKEN_SECRET` value
-5. Save the webhook
+4. Add Basic Authentication:
+   - **Username**: Your `API_USERNAME` value
+   - **Password**: Your `API_PASSWORD` value
+5. Add Custom Header (required if `API_TOKEN_SECRET` is configured):
+   - **Name**: `x-vv-token` (or your `API_TOKEN_HEADER` value)
+   - **Value**: Your `API_TOKEN_SECRET` value
+6. Save the webhook
 
 ### Configuring Prowlarr Webhook
 
@@ -80,10 +86,13 @@
    - **On Indexer Update**: ✓ (optional)
    - **On Indexer Delete**: ✓ (optional)
    - **On Indexer Added**: ✓ (optional)
-4. Add Custom Header:
-   - **Name**: `x-vv-token`
-   - **Value**: Your `WEBHOOK_TOKEN_SECRET` value
-5. Save the webhook
+4. Add Basic Authentication:
+   - **Username**: Your `API_USERNAME` value
+   - **Password**: Your `API_PASSWORD` value
+5. Add Custom Header (optional but recommended):
+   - **Name**: `x-vv-token` (or your `API_TOKEN_HEADER` value)
+   - **Value**: Your `API_TOKEN_SECRET` value
+6. Save the webhook
 
 ### Webhook Payload Examples
 
@@ -175,7 +184,8 @@ You can test webhooks using curl:
 # Test Sonarr webhook
 curl -X POST "https://your-domain.com/api/webhooks/sonarr" \
   -H "Content-Type: application/json" \
-  -H "x-vv-token: your_webhook_token" \
+  -H "Authorization: Basic $(echo -n 'username:password' | base64)" \
+  -H "x-vv-token: your_api_token" \
   -d '{
     "eventType": "Download",
     "series": {
@@ -194,7 +204,8 @@ curl -X POST "https://your-domain.com/api/webhooks/sonarr" \
 # Test Radarr webhook
 curl -X POST "https://your-domain.com/api/webhooks/radarr" \
   -H "Content-Type: application/json" \
-  -H "x-vv-token: your_webhook_token" \
+  -H "Authorization: Basic $(echo -n 'username:password' | base64)" \
+  -H "x-vv-token: your_api_token" \
   -d '{
     "eventType": "Download",
     "movie": {
@@ -206,7 +217,7 @@ curl -X POST "https://your-domain.com/api/webhooks/radarr" \
 # Test Prowlarr webhook
 curl -X POST "https://your-domain.com/api/webhooks/prowlarr" \
   -H "Content-Type: application/json" \
-  -H "x-vv-token: your_webhook_token" \
+  -H "Authorization: Basic $(echo -n 'username:password' | base64)" \
   -d '{
     "eventType": "IndexerStatusChange",
     "indexer": {
@@ -225,5 +236,8 @@ curl -X POST "https://your-domain.com/api/webhooks/prowlarr" \
 - Check available variables list below the JSON editor
 - Preview updates in real-time as you type
 - Test emails are marked with "[Preview]" in the subject line
-- Webhook endpoints require authentication via `x-vv-token` header
-- The webhook token must match the `WEBHOOK_TOKEN_SECRET` environment variable
+- **Sonarr/Radarr webhooks**: Require Basic Auth (username/password) and optionally header token
+- **Prowlarr webhook**: Requires Basic Auth (username/password) only
+- **API endpoints**: Support cookie (for test pages), header token, or Basic Auth
+- The username/password must match `API_USERNAME` and `API_PASSWORD` environment variables
+- The header token (if used) must match the `API_TOKEN_SECRET` environment variable

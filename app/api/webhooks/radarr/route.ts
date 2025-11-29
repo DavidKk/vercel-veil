@@ -6,7 +6,7 @@ import { debug, fail, info } from '@/services/logger'
 import { resolvePreferredTitle } from '@/services/metadata/title'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
-import { ensureAuthorized } from '@/utils/webhooks/auth'
+import { ensureWebhookAuthorized } from '@/utils/webhooks/auth'
 
 import type { RadarrWebhookPayload } from './types'
 import { isRadarrPayload } from './types'
@@ -25,7 +25,7 @@ export const POST = api(async (req: NextRequest) => {
   info('POST /api/webhooks/radarr - Webhook received')
 
   try {
-    ensureAuthorized(req)
+    await ensureWebhookAuthorized(req)
     debug('Webhook authenticated successfully')
 
     const payload = (await req.json()) as RadarrWebhookPayload

@@ -5,7 +5,7 @@ import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/re
 import { debug, fail, info } from '@/services/logger'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
-import { ensureAuthorized } from '@/utils/webhooks/auth'
+import { ensureProwlarrAuthorized } from '@/utils/webhooks/auth'
 
 import type { ProwlarrWebhookPayload } from './types'
 import { isProwlarrPayload } from './types'
@@ -24,7 +24,7 @@ export const POST = api(async (req: NextRequest) => {
   info('POST /api/webhooks/prowlarr - Webhook received')
 
   try {
-    ensureAuthorized(req)
+    await ensureProwlarrAuthorized(req)
     debug('Webhook authenticated successfully')
 
     const payload = (await req.json()) as ProwlarrWebhookPayload

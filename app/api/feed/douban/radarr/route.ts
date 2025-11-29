@@ -2,11 +2,10 @@ import { XMLParser } from 'fast-xml-parser'
 import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
-import { jsonInvalidParameters, jsonSuccess, jsonUnauthorized } from '@/initializer/response'
-import { validateCookie } from '@/services/auth/access'
+import { jsonInvalidParameters, jsonSuccess } from '@/initializer/response'
 import { type DoubanRSSDTO, extractSeriesListFromDoubanRSSDTO } from '@/services/douban'
 import { debug, fail, info } from '@/services/logger'
-import { ensureAuthorized } from '@/utils/webhooks/auth'
+import { ensureApiAuthorized } from '@/utils/webhooks/auth'
 
 const RSS_HEADERS = {
   accept: 'application/xhtml+xml,application/xml;',
@@ -20,23 +19,9 @@ export const GET = api(async (req: NextRequest) => {
   info('GET /api/feed/douban/radarr - Request received')
 
   try {
-    // Support both cookie authentication (for test page) and header token (for third-party)
-    const hasCookie = await validateCookie()
-    debug(`Authentication check: cookie=${hasCookie}`)
-    if (!hasCookie) {
-      try {
-        ensureAuthorized(req)
-        debug('Authenticated via header token')
-      } catch (error) {
-        fail('Authentication failed:', error)
-        if (error && typeof error === 'object' && 'status' in error) {
-          return error as any
-        }
-        return jsonUnauthorized()
-      }
-    } else {
-      debug('Authenticated via cookie')
-    }
+    // Support cookie, header token, or Basic Auth (username/password)
+    await ensureApiAuthorized(req)
+    debug('API authenticated successfully')
 
     const { searchParams } = new URL(req.url)
     const url = searchParams.get('url')

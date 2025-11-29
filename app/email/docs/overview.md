@@ -66,7 +66,7 @@ The preview uses server actions to render the email template with provided varia
 
 **Description**: Receives Sonarr webhook events and sends email notifications using the Sonarr template.
 
-**Authentication**: Required via `x-vv-token` header
+**Authentication**: Required via Basic Auth (username/password) and optionally via `x-vv-token` header
 
 **Request Body**: Native Sonarr webhook JSON payload
 
@@ -75,7 +75,8 @@ The preview uses server actions to render the email template with provided varia
 ```bash
 curl -X POST "https://your-domain.com/api/webhooks/sonarr" \
   -H "Content-Type: application/json" \
-  -H "x-vv-token: your_webhook_token" \
+  -H "Authorization: Basic $(echo -n 'username:password' | base64)" \
+  -H "x-vv-token: your_api_token" \
   -d '{
     "eventType": "Download",
     "series": {
@@ -111,7 +112,7 @@ curl -X POST "https://your-domain.com/api/webhooks/sonarr" \
 
 **Description**: Receives Radarr webhook events and sends email notifications using the Radarr template.
 
-**Authentication**: Required via `x-vv-token` header
+**Authentication**: Required via Basic Auth (username/password) and optionally via `x-vv-token` header
 
 **Request Body**: Native Radarr webhook JSON payload
 
@@ -149,7 +150,7 @@ curl -X POST "https://your-domain.com/api/webhooks/radarr" \
 
 **Description**: Receives Prowlarr webhook events and sends email notifications using the Prowlarr template. Prowlarr is an indexer manager that manages all your indexers in one place.
 
-**Authentication**: Required via `x-vv-token` header
+**Authentication**: Required via Basic Auth (username/password) only. Cookie authentication is also supported for internal use.
 
 **Request Body**: Native Prowlarr webhook JSON payload
 
@@ -166,7 +167,7 @@ curl -X POST "https://your-domain.com/api/webhooks/radarr" \
 ```bash
 curl -X POST "https://your-domain.com/api/webhooks/prowlarr" \
   -H "Content-Type: application/json" \
-  -H "x-vv-token: your_webhook_token" \
+  -H "Authorization: Basic $(echo -n 'username:password' | base64)" \
   -d '{
     "eventType": "IndexerStatusChange",
     "indexer": {
@@ -197,4 +198,7 @@ curl -X POST "https://your-domain.com/api/webhooks/prowlarr" \
 - `RESEND_API_KEY`: Resend API key for sending emails
 - `NOTIFICATION_EMAIL_FROM`: Sender email address
 - `NOTIFICATION_EMAIL_TO`: Default recipient email address
-- `WEBHOOK_TOKEN_SECRET`: Token for webhook authentication (must match the token sent in `x-vv-token` header)
+- `API_USERNAME`: Username for API authentication (Basic Auth)
+- `API_PASSWORD`: Password for API authentication (Basic Auth)
+- `API_TOKEN_SECRET`: Optional token for additional authentication (must match the token sent in header, default header name is `x-vv-token`)
+- `API_TOKEN_HEADER`: Optional header name for token (default: `x-vv-token`)

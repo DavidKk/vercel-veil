@@ -19,10 +19,15 @@ declare namespace NodeJS {
     /** JWT expiration time (seconds or like "1d", default "1d") */
     JWT_EXPIRES_IN?: string
 
-    /** Webhook header name for token (used by third-party callers, default "x-vv-token") */
-    WEBHOOK_TOKEN_HEADER?: string
-    /** Webhook header token value (must match the token sent by third-party callers) */
-    WEBHOOK_TOKEN_SECRET: string
+    /** API authentication configuration */
+    /** API header name for token (used by third-party callers, default "x-vv-token") */
+    API_TOKEN_HEADER?: string
+    /** API header token value (must match the token sent by third-party callers) */
+    API_TOKEN_SECRET?: string
+    /** API username for Basic Authentication */
+    API_USERNAME?: string
+    /** API password for Basic Authentication */
+    API_PASSWORD?: string
 
     /** TMDB related configuration */
     TMDB_API_KEY?: string
