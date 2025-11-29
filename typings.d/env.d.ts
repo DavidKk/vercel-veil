@@ -34,6 +34,8 @@ declare namespace NodeJS {
     /** Preferred TMDB language (default "zh-CN" if not set) */
     TMDB_LANGUAGE?: string
     TMDB_REGION?: string
+    /** TMDB session ID for user authentication (long-term valid) */
+    TMDB_SESSION_ID?: string
 
     /** TheTVDB related configuration */
     THE_TVDB_API_KEY?: string

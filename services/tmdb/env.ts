@@ -15,3 +15,15 @@ export function hasTmdbApiKey(): boolean {
     return false
   }
 }
+
+export function getTmdbSessionId(): string | undefined {
+  return process.env.TMDB_SESSION_ID
+}
+
+export function hasTmdbSessionId(): boolean {
+  return Boolean(process.env.TMDB_SESSION_ID)
+}
+
+export function hasTmdbAuth(): boolean {
+  return hasTmdbSessionId()
+}
