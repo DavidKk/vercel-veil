@@ -1,6 +1,6 @@
 import { fail, info } from '@/services/logger'
 
-import { TVDB_API_BASE_URL } from './conf'
+import { THETVDB } from './constants'
 import { getAccessToken } from './getAccessToken'
 import type { Movie } from './types'
 
@@ -17,7 +17,7 @@ export async function searchByTitle(title: string, options: SearchOptions = {}):
   const token = await getAccessToken()
   const language = options.language ?? process.env.THE_TVDB_LANGUAGE ?? 'zh-CN'
 
-  const url = new URL(`${TVDB_API_BASE_URL}/search`)
+  const url = new URL(`${THETVDB.API_BASE_URL}/search`)
   url.searchParams.set('query', title)
   if (language) {
     url.searchParams.set('language', language)

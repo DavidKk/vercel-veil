@@ -1,21 +1,16 @@
 import { debug, fail } from '@/services/logger'
 
+import { NAVIDROME, NAVIDROME_CACHE } from './constants'
 import { hashToken } from './token'
 import { isNavidromeResponse, type NavidromeResponse } from './types'
 
 // Simple in-memory cache for Navidrome requests
 const cache = new Map<string, { data: NavidromeResponse; timestamp: number; ttl: number }>()
 
-const DEFAULT_PARAMS = {
-  v: '1.16.1',
-  c: 'vercel-veil',
-  f: 'json',
-}
-
 export interface RequestOptions {
   /** Whether to enable cache, default true */
   useCache?: boolean
-  /** Cache TTL in seconds, default 60 */
+  /** Cache TTL in seconds, default from NAVIDROME_CACHE.DEFAULT_TTL */
   cacheTtl?: number
 }
 
@@ -47,7 +42,7 @@ function getServerInfo() {
 function getSearchParams(params: Record<string, string>) {
   const { username, salt, hashHex } = getServerInfo()
   return new URLSearchParams({
-    ...DEFAULT_PARAMS,
+    ...NAVIDROME.DEFAULT_PARAMS,
     u: username,
     s: salt,
     t: hashHex,
@@ -69,7 +64,7 @@ export async function request(path: string, params: Record<string, string> = {},
 
   // Check if cache is enabled
   const isGetRequest = (init.method || 'GET').toUpperCase() === 'GET'
-  const { useCache: shouldCache = CACHE && isGetRequest, cacheTtl = 60 } = options
+  const { useCache: shouldCache = CACHE && isGetRequest, cacheTtl = NAVIDROME_CACHE.DEFAULT_TTL } = options
 
   if (shouldCache) {
     const cacheKey = generateCacheKey(path, params)

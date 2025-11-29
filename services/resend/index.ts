@@ -2,6 +2,8 @@
  * Resend Email Service
  */
 
+import { RESEND } from './constants'
+
 export interface ResendEmailOptions {
   from: string
   to: string | string[]
@@ -19,8 +21,6 @@ export interface ResendResponse {
   object: string
 }
 
-const RESEND_API_URL = 'https://api.resend.com/emails'
-
 function ensureEnv(name: string, value?: string) {
   if (!value) {
     throw new Error(`${name} is not configured in environment variables`)
@@ -30,7 +30,7 @@ function ensureEnv(name: string, value?: string) {
 }
 
 export async function sendEmail(apiKey: string, options: ResendEmailOptions): Promise<ResendResponse> {
-  const response = await fetch(RESEND_API_URL, {
+  const response = await fetch(RESEND.API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

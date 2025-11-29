@@ -6,6 +6,7 @@ import { fail } from '@/services/logger'
 import { resolvePreferredTitle } from '@/services/metadata/title'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
+import { syncToTMDBFavoritesAsync } from '@/services/tmdb/sync'
 import { ensureWebhookAuthorized } from '@/utils/webhooks/auth'
 
 import type { RadarrWebhookPayload } from './types'
@@ -61,6 +62,15 @@ export const POST = api(async (req: NextRequest) => {
   const subject = `[Radarr][${variables.eventType}] ${variables.movieTitle}${year}`
 
   await sendNotification(subject, html)
+
+  // Async sync to TMDB favorites (fire and forget, doesn't affect webhook flow)
+  // Only sync on Download or Upgrade events (when movie is actually downloaded)
+  if ((payload.eventType === 'Download' || payload.eventType === 'Upgrade') && payload.movie?.tmdbId) {
+    syncToTMDBFavoritesAsync(payload.movie.tmdbId, true).catch((error) => {
+      // Error already logged in syncToTMDBFavoritesAsync, just catch to prevent unhandled rejection
+      fail('TMDB favorite sync failed (non-blocking):', error)
+    })
+  }
 
   return {
     ...standardResponseSuccess({ source: 'radarr', eventType: payload.eventType }),

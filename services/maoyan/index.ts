@@ -1,30 +1,26 @@
+import { fetchJsonWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 import type { TMDBMovie } from '@/services/tmdb'
-import { fetchNowPlayingMovies, fetchPopularMovies, fetchUpcomingMovies, getGenreNames, getMovieDetails, searchMulti } from '@/services/tmdb'
+import { fetchNowPlayingMovies, fetchPopularMovies, fetchUpcomingMovies, getGenreNames, getMovieDetails, getMovieGenres, searchMulti } from '@/services/tmdb'
 import { hasTmdbApiKey } from '@/services/tmdb/env'
 
+import { MAOYAN, MAOYAN_CACHE } from './constants'
 import type { ComingMovie, MergedMovie, MostExpectedResponse, MovieListItem, TopRatedMoviesResponse } from './types'
-
-const MAOYAN_API_BASE = 'https://apis.netstart.cn/maoyan'
 
 /**
  * Fetch top rated movies list
+ * Results are cached according to MAOYAN_CACHE.TOP_RATED_MOVIES to reduce API requests
  */
 export async function fetchTopRatedMovies(): Promise<MovieListItem[]> {
   try {
     info('Fetching top rated movies from Maoyan')
-    const response = await fetch(`${MAOYAN_API_BASE}/index/topRatedMovies`, {
+    const data = await fetchJsonWithCache<TopRatedMoviesResponse>(`${MAOYAN.API_BASE}/index/topRatedMovies`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': MAOYAN.USER_AGENT,
       },
+      cacheDuration: MAOYAN_CACHE.TOP_RATED_MOVIES,
     })
 
-    if (!response.ok) {
-      fail(`Failed to fetch top rated movies: ${response.status} ${response.statusText}`)
-      return []
-    }
-
-    const data = (await response.json()) as TopRatedMoviesResponse
     info(`Fetched ${data.movieList?.length || 0} top rated movies`)
     return data.movieList || []
   } catch (error) {
@@ -35,22 +31,18 @@ export async function fetchTopRatedMovies(): Promise<MovieListItem[]> {
 
 /**
  * Fetch most expected movies list
+ * Results are cached according to MAOYAN_CACHE.MOST_EXPECTED to reduce API requests
  */
 export async function fetchMostExpected(limit = 20, offset = 0): Promise<ComingMovie[]> {
   try {
     info(`Fetching most expected movies from Maoyan (limit=${limit}, offset=${offset})`)
-    const response = await fetch(`${MAOYAN_API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
+    const data = await fetchJsonWithCache<MostExpectedResponse>(`${MAOYAN.API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': MAOYAN.USER_AGENT,
       },
+      cacheDuration: MAOYAN_CACHE.MOST_EXPECTED,
     })
 
-    if (!response.ok) {
-      fail(`Failed to fetch most expected movies: ${response.status} ${response.statusText}`)
-      return []
-    }
-
-    const data = (await response.json()) as MostExpectedResponse
     info(`Fetched ${data.coming?.length || 0} most expected movies`)
     return data.coming || []
   } catch (error) {
@@ -60,21 +52,19 @@ export async function fetchMostExpected(limit = 20, offset = 0): Promise<ComingM
 }
 
 /**
- * Enrich movie information by searching TMDB
+ * Enrich a single movie with basic TMDB search result
+ * Returns the movie with TMDB ID and basic info, and indicates if details are needed
  */
-async function enrichMovieWithTMDB(movie: MergedMovie): Promise<MergedMovie> {
+async function enrichMovieWithSearchResult(movie: MergedMovie): Promise<{ movie: MergedMovie; needsDetails: boolean; genreIds: number[] }> {
   if (!hasTmdbApiKey()) {
-    warn('TMDB API key not configured, skipping enrichment')
-    return movie
+    return { movie, needsDetails: false, genreIds: [] }
   }
 
   try {
-    info(`Searching TMDB for: ${movie.name}`)
     const results = await searchMulti(movie.name, { language: 'zh-CN' })
 
     if (!results || results.length === 0) {
-      warn(`No TMDB results found for: ${movie.name}`)
-      return movie
+      return { movie, needsDetails: false, genreIds: [] }
     }
 
     // Prefer movie type results
@@ -88,19 +78,11 @@ async function enrichMovieWithTMDB(movie: MergedMovie): Promise<MergedMovie> {
         movie.tmdbPoster = `https://image.tmdb.org/t/p/w500${movieResult.poster_path}`
       }
 
-      // Try to get overview, with fallback to English if Chinese is empty
-      if (movieResult.overview && movieResult.overview.trim() !== '') {
+      // Check if we need to fetch details for overview
+      const needsDetails = !movieResult.overview || movieResult.overview.trim() === ''
+
+      if (!needsDetails) {
         movie.overview = movieResult.overview
-      } else {
-        // If Chinese overview is empty, try to get English overview
-        try {
-          const movieDetails = await getMovieDetails(movieResult.id, 'zh-CN')
-          if (movieDetails?.overview && movieDetails.overview.trim() !== '') {
-            movie.overview = movieDetails.overview
-          }
-        } catch (error) {
-          warn(`Failed to get movie details for "${movie.name}":`, error)
-        }
       }
 
       if ('release_date' in movieResult && movieResult.release_date) {
@@ -115,22 +97,144 @@ async function enrichMovieWithTMDB(movie: MergedMovie): Promise<MergedMovie> {
         movie.rating = movieResult.vote_average
       }
 
-      // Get genre names from genre IDs
-      if (movieResult.genre_ids && movieResult.genre_ids.length > 0) {
-        try {
-          movie.genres = await getGenreNames(movieResult.genre_ids)
-        } catch (error) {
-          warn(`Failed to get genre names for movie "${movie.name}":`, error)
-        }
-      }
+      const genreIds = movieResult.genre_ids || []
 
-      info(`Enriched movie "${movie.name}" with TMDB ID: ${movie.tmdbId}`)
+      return { movie, needsDetails, genreIds }
     }
   } catch (error) {
-    fail(`Error enriching movie "${movie.name}" with TMDB:`, error)
+    fail(`Error searching TMDB for "${movie.name}":`, error)
   }
 
-  return movie
+  return { movie, needsDetails: false, genreIds: [] }
+}
+
+/**
+ * Batch enrich movies with TMDB information
+ * Optimizes API calls by batching requests and reducing redundant calls
+ * @param movies Movies to enrich
+ * @param tmdbTitleMap Optional map of movie titles to TMDB movies (from already fetched lists) to avoid unnecessary searches
+ */
+async function batchEnrichMoviesWithTMDB(movies: MergedMovie[], tmdbTitleMap?: Map<string, TMDBMovie>): Promise<MergedMovie[]> {
+  if (!hasTmdbApiKey() || movies.length === 0) {
+    return movies
+  }
+
+  info(`Batch enriching ${movies.length} movies with TMDB data`)
+
+  // Step 1: Try to match movies with already fetched TMDB data first
+  const moviesToSearch: Array<{ movie: MergedMovie; index: number }> = []
+  const enrichedMovies: MergedMovie[] = []
+
+  if (tmdbTitleMap) {
+    for (let i = 0; i < movies.length; i++) {
+      const movie = movies[i]
+      const key = movie.name.toLowerCase().trim()
+      const tmdbMovie = tmdbTitleMap.get(key)
+
+      if (tmdbMovie) {
+        // Use existing TMDB data
+        const enriched: MergedMovie = {
+          ...movie,
+          tmdbId: tmdbMovie.id,
+          tmdbUrl: `https://www.themoviedb.org/movie/${tmdbMovie.id}`,
+        }
+
+        if (tmdbMovie.poster_path) {
+          enriched.tmdbPoster = `https://image.tmdb.org/t/p/w500${tmdbMovie.poster_path}`
+        }
+
+        if (tmdbMovie.overview && tmdbMovie.overview.trim() !== '') {
+          enriched.overview = tmdbMovie.overview
+        }
+
+        if (tmdbMovie.release_date) {
+          enriched.releaseDate = tmdbMovie.release_date
+          const yearMatch = tmdbMovie.release_date.match(/^(\d{4})/)
+          if (yearMatch) {
+            enriched.year = parseInt(yearMatch[1], 10)
+          }
+        }
+
+        if (tmdbMovie.vote_average) {
+          enriched.rating = tmdbMovie.vote_average
+        }
+
+        enrichedMovies[i] = enriched
+      } else {
+        // Need to search
+        moviesToSearch.push({ movie, index: i })
+        enrichedMovies[i] = movie
+      }
+    }
+  } else {
+    // No pre-fetched data, need to search all
+    for (let i = 0; i < movies.length; i++) {
+      moviesToSearch.push({ movie: movies[i], index: i })
+      enrichedMovies[i] = movies[i]
+    }
+  }
+
+  // Step 2: Parallel search for movies that weren't matched
+  const searchResults = await Promise.allSettled(moviesToSearch.map(({ movie }) => enrichMovieWithSearchResult(movie)))
+
+  // Step 3: Process search results and collect movies that need details
+  const moviesNeedingDetails: Array<{ movie: MergedMovie; originalIndex: number }> = []
+  const movieGenreMap = new Map<number, number[]>() // original index -> genre IDs
+  const allGenreIds = new Set<number>()
+
+  for (let i = 0; i < searchResults.length; i++) {
+    const result = searchResults[i]
+    const searchItem = moviesToSearch[i]
+
+    if (result.status === 'fulfilled') {
+      const { movie, needsDetails, genreIds } = result.value
+      enrichedMovies[searchItem.index] = movie
+
+      if (needsDetails && movie.tmdbId) {
+        moviesNeedingDetails.push({ movie, originalIndex: searchItem.index })
+      }
+
+      if (genreIds.length > 0) {
+        movieGenreMap.set(searchItem.index, genreIds)
+        genreIds.forEach((id) => allGenreIds.add(id))
+      }
+    }
+  }
+
+  // Step 4: Batch fetch movie details in parallel (only for movies that need it)
+  if (moviesNeedingDetails.length > 0) {
+    info(`Fetching details for ${moviesNeedingDetails.length} movies in parallel`)
+    const detailsResults = await Promise.allSettled(moviesNeedingDetails.map(({ movie }) => getMovieDetails(movie.tmdbId!, 'zh-CN')))
+
+    for (let i = 0; i < detailsResults.length; i++) {
+      const result = detailsResults[i]
+      if (result.status === 'fulfilled' && result.value?.overview) {
+        const { originalIndex } = moviesNeedingDetails[i]
+        enrichedMovies[originalIndex].overview = result.value.overview
+      }
+    }
+  }
+
+  // Step 5: Batch get all genre names (ensures genre cache is populated)
+  if (allGenreIds.size > 0) {
+    const genreIdsArray = Array.from(allGenreIds)
+    // This will use the cached genre map, so it's efficient even if called multiple times
+    await getGenreNames(genreIdsArray)
+  }
+
+  // Step 6: Apply genre names to movies
+  if (movieGenreMap.size > 0) {
+    const genresMap = await getMovieGenres()
+    for (const [movieIndex, genreIds] of movieGenreMap.entries()) {
+      if (enrichedMovies[movieIndex]) {
+        enrichedMovies[movieIndex].genres = genreIds.map((id) => genresMap.get(id) || '').filter((name) => name !== '')
+      }
+    }
+  }
+
+  const enrichedCount = enrichedMovies.filter((m) => m.tmdbId).length
+  info(`Batch enrichment completed: ${enrichedCount}/${movies.length} movies enriched with TMDB data`)
+  return enrichedMovies
 }
 
 /**
@@ -329,6 +433,9 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
       tmdbPromises.push(fetchNowPlayingMovies({ language: 'zh-CN', page: 1 }))
     }
 
+    // Build a map of TMDB movies by title for efficient lookup
+    const tmdbTitleMap = new Map<string, TMDBMovie>()
+
     if (tmdbPromises.length > 0) {
       info('Fetching TMDB movie lists')
       const tmdbResults = await Promise.allSettled(tmdbPromises)
@@ -339,6 +446,13 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
         if (result.status === 'fulfilled') {
           const movies = result.value
           await mergeTMDBMovies(movieMap, movies, 'tmdbPopular')
+          // Add to title map for efficient lookup during enrichment
+          for (const movie of movies) {
+            const key = movie.title.toLowerCase().trim()
+            if (!tmdbTitleMap.has(key)) {
+              tmdbTitleMap.set(key, movie)
+            }
+          }
           info(`Merged ${movies.length} popular movies from TMDB`)
         }
         tmdbIndex++
@@ -349,6 +463,13 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
         if (result.status === 'fulfilled') {
           const movies = result.value
           await mergeTMDBMovies(movieMap, movies, 'tmdbUpcoming')
+          // Add to title map for efficient lookup during enrichment
+          for (const movie of movies) {
+            const key = movie.title.toLowerCase().trim()
+            if (!tmdbTitleMap.has(key)) {
+              tmdbTitleMap.set(key, movie)
+            }
+          }
           info(`Merged ${movies.length} upcoming movies from TMDB`)
         }
         tmdbIndex++
@@ -359,23 +480,27 @@ export async function getMergedMoviesList(options: GetMergedMoviesListOptions = 
         if (result.status === 'fulfilled') {
           const movies = result.value
           await mergeTMDBMovies(movieMap, movies, 'tmdbNowPlaying')
+          // Add to title map for efficient lookup during enrichment
+          for (const movie of movies) {
+            const key = movie.title.toLowerCase().trim()
+            if (!tmdbTitleMap.has(key)) {
+              tmdbTitleMap.set(key, movie)
+            }
+          }
           info(`Merged ${movies.length} now playing movies from TMDB`)
         }
       }
     }
 
     // Enrich remaining movies with TMDB search (for movies that don't have TMDB data yet)
-    info('Enriching movies with TMDB search data')
     const moviesToEnrich = Array.from(movieMap.values()).filter((m) => !m.tmdbId)
     if (moviesToEnrich.length > 0) {
-      const enriched = await Promise.allSettled(moviesToEnrich.map((movie) => enrichMovieWithTMDB(movie)))
+      // Use batch enrichment with pre-fetched TMDB data to avoid unnecessary searches
+      const enriched = await batchEnrichMoviesWithTMDB(moviesToEnrich, tmdbTitleMap)
 
       for (let i = 0; i < enriched.length; i++) {
-        const result = enriched[i]
-        if (result.status === 'fulfilled') {
-          const key = moviesToEnrich[i].name.toLowerCase().trim()
-          movieMap.set(key, result.value)
-        }
+        const key = moviesToEnrich[i].name.toLowerCase().trim()
+        movieMap.set(key, enriched[i])
       }
     }
   }

@@ -1,7 +1,7 @@
 import { fail, info } from '@/services/logger'
 import { getTheTvdbApiKey } from '@/services/thetvdb/env'
 
-import { TOKEN_EXPIRATION_TIME, TVDB_API_BASE_URL } from './conf'
+import { THETVDB, THETVDB_CACHE } from './constants'
 
 export interface AccessTokenResp {
   data: {
@@ -26,7 +26,7 @@ export async function getAccessToken(): Promise<string> {
     info('Fetching new TVDB token')
     const body = JSON.stringify({ apikey: apiKey })
 
-    tokenPromise = fetch(`${TVDB_API_BASE_URL}/login`, {
+    tokenPromise = fetch(`${THETVDB.API_BASE_URL}/login`, {
       method: 'POST',
       headers: {
         accept: 'application/json',
@@ -42,7 +42,7 @@ export async function getAccessToken(): Promise<string> {
         const json = (await response.json()) as AccessTokenResp
         const token = json.data.token
         cachedToken = token
-        tokenExpirationTime = now + TOKEN_EXPIRATION_TIME
+        tokenExpirationTime = now + THETVDB_CACHE.TOKEN_EXPIRATION_TIME
         info('TVDB token refreshed')
         return token
       })

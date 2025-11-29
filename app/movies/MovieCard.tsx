@@ -20,7 +20,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
   const [isFavoriting, setIsFavoriting] = useState(false)
   const alertRef = useRef<AlertImperativeHandler>(null)
 
-  // Update local state when prop changes (but not while processing)
+  // Update local state when prop changes (only if not currently processing)
   useEffect(() => {
     if (!isFavoriting) {
       setIsFavorited(initialIsFavorited)
@@ -132,16 +132,21 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
               onClick={async () => {
                 if (!movie.tmdbId || isFavoriting) return
 
+                // Optimistic update: immediately update UI
+                const newFavoriteState = !isFavorited
+                setIsFavorited(newFavoriteState)
                 setIsFavoriting(true)
+
                 try {
-                  const newFavoriteState = !isFavorited
                   const result = await favoriteMovie(movie.tmdbId, newFavoriteState)
-                  if (result.success) {
-                    setIsFavorited(newFavoriteState)
-                  } else {
+                  if (!result.success) {
+                    // Rollback on failure
+                    setIsFavorited(!newFavoriteState)
                     alertRef.current?.show(result.message, { type: 'error' })
                   }
                 } catch (error) {
+                  // Rollback on error
+                  setIsFavorited(!newFavoriteState)
                   const errorMessage = error instanceof Error ? error.message : 'Operation failed'
                   alertRef.current?.show(errorMessage, { type: 'error' })
                 } finally {

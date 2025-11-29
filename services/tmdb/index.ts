@@ -1,7 +1,8 @@
+import { fetchJsonWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 import { getTmdbApiKey, getTmdbSessionId, hasTmdbAuth } from '@/services/tmdb/env'
 
-import { TMDB_API_BASE_URL } from './conf'
+import { TMDB, TMDB_CACHE } from './constants'
 import type { SearchResult } from './types'
 
 /**
@@ -34,7 +35,7 @@ export async function getMovieGenres(): Promise<Map<number, string>> {
 
   try {
     info('Fetching movie genres from TMDB')
-    const apiUrl = `${TMDB_API_BASE_URL}/genre/movie/list?api_key=${apiKey}&language=${language}`
+    const apiUrl = `${TMDB.API_BASE_URL}/genre/movie/list?api_key=${apiKey}&language=${language}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -137,7 +138,7 @@ export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Prom
       params.set('region', options.region)
     }
 
-    const apiUrl = `${TMDB_API_BASE_URL}/movie/popular?${params.toString()}`
+    const apiUrl = `${TMDB.API_BASE_URL}/movie/popular?${params.toString()}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -181,7 +182,7 @@ export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Pro
       params.set('region', options.region)
     }
 
-    const apiUrl = `${TMDB_API_BASE_URL}/movie/upcoming?${params.toString()}`
+    const apiUrl = `${TMDB.API_BASE_URL}/movie/upcoming?${params.toString()}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -223,7 +224,7 @@ export async function fetchNowPlayingMovies(options: FetchMoviesOptions = {}): P
       params.set('region', options.region)
     }
 
-    const apiUrl = `${TMDB_API_BASE_URL}/movie/now_playing?${params.toString()}`
+    const apiUrl = `${TMDB.API_BASE_URL}/movie/now_playing?${params.toString()}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -274,7 +275,7 @@ export async function discoverMovies(options: FetchMoviesOptions = {}): Promise<
       params.set('primary_release_date.lte', options.primary_release_date_lte)
     }
 
-    const apiUrl = `${TMDB_API_BASE_URL}/discover/movie?${params.toString()}`
+    const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'application/json',
@@ -297,41 +298,39 @@ export async function discoverMovies(options: FetchMoviesOptions = {}): Promise<
 
 /**
  * Get movie details with fallback language for overview
+ * Results are cached according to TMDB_CACHE.MOVIE_DETAILS to reduce API requests
  */
 export async function getMovieDetails(movieId: number, preferredLanguage = 'zh-CN'): Promise<{ overview?: string; [key: string]: any } | null> {
   const apiKey = getTmdbApiKey()
 
   try {
-    // First try with preferred language
-    let apiUrl = `${TMDB_API_BASE_URL}/movie/${movieId}?api_key=${apiKey}&language=${preferredLanguage}`
-    let response = await fetch(apiUrl, {
+    // First try with preferred language (cached)
+    const apiUrl = `${TMDB.API_BASE_URL}/movie/${movieId}?api_key=${apiKey}&language=${preferredLanguage}`
+    let data = await fetchJsonWithCache<{ overview?: string; [key: string]: any }>(apiUrl, {
       headers: {
         accept: 'application/json',
       },
+      cacheDuration: TMDB_CACHE.MOVIE_DETAILS,
     })
 
-    if (!response.ok) {
-      fail(`TMDB get movie details failed: status=${response.status} ${response.statusText}`)
+    if (!data) {
+      fail(`TMDB get movie details failed for movie ${movieId}`)
       return null
     }
 
-    let data = (await response.json()) as { overview?: string; [key: string]: any }
-
-    // If overview is empty and preferred language is not English, try English
+    // If overview is empty and preferred language is not English, try English (cached)
     if ((!data.overview || data.overview.trim() === '') && preferredLanguage !== 'en-US' && preferredLanguage !== 'en') {
       info(`Movie ${movieId} has no overview in ${preferredLanguage}, trying English`)
-      apiUrl = `${TMDB_API_BASE_URL}/movie/${movieId}?api_key=${apiKey}&language=en-US`
-      response = await fetch(apiUrl, {
+      const enApiUrl = `${TMDB.API_BASE_URL}/movie/${movieId}?api_key=${apiKey}&language=en-US`
+      const enData = await fetchJsonWithCache<{ overview?: string; [key: string]: any }>(enApiUrl, {
         headers: {
           accept: 'application/json',
         },
+        cacheDuration: TMDB_CACHE.MOVIE_DETAILS,
       })
 
-      if (response.ok) {
-        const enData = (await response.json()) as { overview?: string; [key: string]: any }
-        if (enData.overview && enData.overview.trim() !== '') {
-          data.overview = enData.overview
-        }
+      if (enData?.overview && enData.overview.trim() !== '') {
+        data.overview = enData.overview
       }
     }
 
@@ -362,20 +361,15 @@ export async function searchMulti(title: string, options: SearchOptions = {}): P
       params.set('region', region)
     }
 
-    const apiUrl = `${TMDB_API_BASE_URL}/search/multi?${params.toString()}`
-    const response = await fetch(apiUrl, {
+    const apiUrl = `${TMDB.API_BASE_URL}/search/multi?${params.toString()}`
+    const data = await fetchJsonWithCache<SearchResponse>(apiUrl, {
       headers: {
         accept: 'application/json',
       },
+      cacheDuration: TMDB_CACHE.SEARCH,
     })
 
-    if (!response.ok) {
-      fail(`TMDB search failed "${title}" status=${response.status} ${response.statusText}`)
-      return null
-    }
-
-    const data = (await response.json()) as SearchResponse
-    if (!(Array.isArray(data.results) && data.results.length > 0)) {
+    if (!data || !Array.isArray(data.results) || data.results.length === 0) {
       warn(`TMDB search empty result for "${title}"`)
       return []
     }
@@ -408,7 +402,7 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
   }
 
   try {
-    const apiUrl = `${TMDB_API_BASE_URL}/account?api_key=${apiKey}&session_id=${sessionId}`
+    const apiUrl = `${TMDB.API_BASE_URL}/account?api_key=${apiKey}&session_id=${sessionId}`
     info(`Fetching TMDB account info with session_id: ${sessionId.substring(0, 8)}...`)
 
     const response = await fetch(apiUrl, {
@@ -472,7 +466,7 @@ export async function getFavoriteMovies(): Promise<Set<number>> {
   }
 
   try {
-    const apiUrl = `${TMDB_API_BASE_URL}/account/${accountInfo.accountId}/favorite/movies?api_key=${apiKey}&session_id=${sessionId}`
+    const apiUrl = `${TMDB.API_BASE_URL}/account/${accountInfo.accountId}/favorite/movies?api_key=${apiKey}&session_id=${sessionId}`
     info(`Fetching TMDB favorite movies for account ${accountInfo.accountId}`)
 
     const favoriteIds = new Set<number>()
@@ -553,7 +547,7 @@ export async function addToFavorites(movieId: number, favorite = true): Promise<
   try {
     info(`Adding movie ${movieId} to favorites: ${favorite}`)
 
-    const apiUrl = `${TMDB_API_BASE_URL}/account/${accountInfo.accountId}/favorite?api_key=${apiKey}&session_id=${sessionId}`
+    const apiUrl = `${TMDB.API_BASE_URL}/account/${accountInfo.accountId}/favorite?api_key=${apiKey}&session_id=${sessionId}`
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {

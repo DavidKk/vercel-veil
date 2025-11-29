@@ -1,2 +1,0 @@
-export const TOKEN_EXPIRATION_TIME = 50 * 60 * 1000
-export const TVDB_API_BASE_URL = atob('aHR0cHM6Ly9hcGk0LnRoZXR2ZGIuY29tL3Y0')

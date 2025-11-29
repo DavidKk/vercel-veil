@@ -4,5 +4,6 @@ export const DEFAULT_NAV = {
   private: [
     { name: 'Music', href: '/music' },
     { name: 'Movies', href: '/movies' },
+    { name: 'Sync', href: '/sync' },
   ],
 }

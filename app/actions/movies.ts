@@ -10,6 +10,7 @@ import { hasTmdbAuth } from '@/services/tmdb/env'
 /**
  * Get merged movie list (Server Action)
  * Internal use only, requires authentication
+ * Underlying API requests are cached at the atomic level (fetchTopRatedMovies, fetchMostExpected)
  * @param options Options for fetching movies
  *   - includeTMDBPopular: Include popular movies from TMDB (default: true)
  *   - includeTMDBUpcoming: Include upcoming movies from TMDB (default: true, returns next 4 weeks like TMDB website)
@@ -17,7 +18,7 @@ import { hasTmdbAuth } from '@/services/tmdb/env'
  */
 export type GetMoviesListOptions = GetMergedMoviesListOptions
 
-export async function getMoviesList(options: GetMoviesListOptions = {}): Promise<MergedMovie[]> {
+export async function getMoviesList(options: GetMergedMoviesListOptions = {}): Promise<MergedMovie[]> {
   const startTime = Date.now()
   info('getMoviesList - Request received', options)
 

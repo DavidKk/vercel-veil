@@ -1,3 +1,5 @@
+import { GIST } from './constants'
+
 export interface Gist {
   url: string
   forks_url: string
@@ -22,7 +24,7 @@ export interface FetchGistFileParams {
 
 export async function fetchGist(params: FetchGistFileParams): Promise<Gist> {
   const { gistId, gistToken } = params
-  const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const response = await fetch(`${GIST.API_BASE}${gistId}`, {
     headers: {
       Authorization: `token ${gistToken}`,
     },
@@ -76,7 +78,7 @@ export async function writeGistFiles(params: WriteGistFilesParams) {
     })()
   )
 
-  const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const response = await fetch(`${GIST.API_BASE}${gistId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `token ${gistToken}`,
@@ -99,7 +101,7 @@ export interface WriteGistFileParams extends FetchGistFileParams {
 
 export async function writeGistFile(params: WriteGistFileParams) {
   const { gistId, gistToken, file, content } = params
-  const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const response = await fetch(`${GIST.API_BASE}${gistId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `token ${gistToken}`,
