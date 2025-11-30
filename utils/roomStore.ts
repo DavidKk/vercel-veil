@@ -45,7 +45,7 @@ const generateRoomId = () => {
 const touchRoom = (room: RoomState) => {
   const now = Date.now()
   room.updatedAt = now
-  // 延长房间过期时间，只要房间在使用中就保持有效
+  // Extend room expiration time, keep it valid as long as the room is in use
   room.expiresAt = now + ROOM_TTL_MS
 }
 

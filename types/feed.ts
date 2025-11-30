@@ -1,7 +1,7 @@
 export interface Season {
-  /** 季度 */
+  /** Season number */
   seasonNumber?: number
-  /** 监控 */
+  /** Whether the season is monitored */
   monitored?: boolean
 }
 
@@ -10,13 +10,13 @@ export type MovieId = string | number
 export type MovieMediaType = 'series' | 'movie'
 
 export interface Series {
-  /** 标题 */
+  /** Title */
   title: string
-  /** 中文标题 */
+  /** Chinese title */
   chineseTitle?: string
-  /** 类型 */
+  /** Media type */
   mediaType?: MovieMediaType
-  /** 年份 */
+  /** Year */
   year?: number
   /** thetvdb.com */
   tvdbId?: MovieId
@@ -24,9 +24,9 @@ export interface Series {
   tmdbId?: MovieId
   /** imdb.com */
   imdbId?: MovieId
-  /** douban.com 仅用于标记 */
+  /** douban.com (for tagging only) */
   doubanId?: MovieId
-  /** 季度 */
+  /** Seasons */
   seasons?: Season[]
 }
 

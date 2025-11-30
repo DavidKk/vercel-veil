@@ -9,13 +9,13 @@ export function useIsMobile(initialValue = false) {
     function detectMobile() {
       let mobile = false
 
-      // 屏幕宽度判断
+      // Screen width detection
       const width = window.innerWidth
       if (width < 1024) {
         mobile = true
       }
 
-      // Touch Events 判断
+      // Touch Events detection
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
       if (isTouchDevice && width < 1200) {
         mobile = true

@@ -519,7 +519,7 @@ export async function addToFavorites(movieId: number, favorite = true): Promise<
   try {
     accountInfo = await getAccountInfo()
   } catch (error) {
-    // 如果 getAccountInfo 已经抛出了详细的错误，直接重新抛出
+    // If getAccountInfo has already thrown a detailed error, rethrow it directly
     throw error
   }
 

@@ -1,6 +1,6 @@
-import { escapeHtml } from '@/utils/webhooks/format'
+import { escapeHtml, formatFileSize } from '@/utils/webhooks/format'
 
-import type { ProwlarrIndexer, ProwlarrWebhookPayload } from './types'
+import type { ProwlarrIndexer, ProwlarrRelease, ProwlarrWebhookPayload } from './types'
 
 /**
  * Template variables for Prowlarr email notifications
@@ -8,9 +8,9 @@ import type { ProwlarrIndexer, ProwlarrWebhookPayload } from './types'
 export interface ProwlarrTemplateVariables {
   /** Indexer name */
   indexerName: string
-  /** Event type (e.g., IndexerStatusChange, IndexerUpdate) */
+  /** Event type (e.g., IndexerStatusChange, IndexerUpdate, Grab) */
   eventType: string
-  /** Localized action label in Chinese */
+  /** Localized action label */
   actionLabel: string
   /** Prowlarr instance name */
   instanceName: string
@@ -22,7 +22,9 @@ export interface ProwlarrTemplateVariables {
   message: string
   /** Indexer details HTML */
   indexerDetails: string
-  /** Application URL */
+  /** Release details HTML (for Grab events) */
+  releaseDetails: string
+  /** Application URL (from webhook payload, not displayed in template) */
   applicationUrl: string
 }
 
@@ -32,17 +34,27 @@ export interface ProwlarrTemplateVariables {
  * @returns Template variables ready for email rendering
  */
 export async function prepareProwlarrTemplateVariables(payload: ProwlarrWebhookPayload): Promise<ProwlarrTemplateVariables> {
+  // For Grab events, get indexer name from release.indexer first, then fallback to indexer.name
   const indexer = payload.indexer ?? payload.indexers?.[0]
-  const indexerName = indexer?.name ?? 'Unknown Indexer'
+  const indexerName = payload.release?.indexer ?? indexer?.name ?? 'Unknown Indexer'
   const eventType = payload.eventType ?? 'Unknown Event'
   const instanceName = payload.instanceName ?? ''
-  const protocol = indexer?.protocol ? indexer.protocol.charAt(0).toUpperCase() + indexer.protocol.slice(1) : 'Unknown'
+
+  // For Grab events, try to infer protocol from release title or use indexer protocol
+  let protocol = 'Unknown'
+  if (payload.release?.indexer && indexer?.protocol) {
+    protocol = indexer.protocol.charAt(0).toUpperCase() + indexer.protocol.slice(1)
+  } else if (indexer?.protocol) {
+    protocol = indexer.protocol.charAt(0).toUpperCase() + indexer.protocol.slice(1)
+  }
+
   const message = payload.message ?? ''
   const applicationUrl = payload.applicationUrl ?? ''
 
   const actionLabel = getActionLabel(eventType)
   const statusChange = formatStatusChange(payload)
   const indexerDetails = formatIndexerDetails(indexer)
+  const releaseDetails = formatReleaseDetails(payload.release)
 
   return {
     indexerName,
@@ -53,22 +65,24 @@ export async function prepareProwlarrTemplateVariables(payload: ProwlarrWebhookP
     statusChange,
     message,
     indexerDetails,
+    releaseDetails,
     applicationUrl,
   }
 }
 
 /**
- * Convert event type to localized Chinese label
+ * Convert event type to localized label
  * @param eventType Event type string
- * @returns Localized label in Chinese
+ * @returns Localized label
  */
 function getActionLabel(eventType: string): string {
   const labels: Record<string, string> = {
-    Test: '测试',
-    IndexerStatusChange: '索引器状态变更',
-    IndexerUpdate: '索引器更新',
-    IndexerDelete: '索引器删除',
-    IndexerAdded: '索引器添加',
+    Test: 'Test',
+    Grab: 'Grab',
+    IndexerStatusChange: 'Indexer Status Change',
+    IndexerUpdate: 'Indexer Update',
+    IndexerDelete: 'Indexer Delete',
+    IndexerAdded: 'Indexer Added',
   }
   return labels[eventType] ?? eventType
 }
@@ -76,7 +90,7 @@ function getActionLabel(eventType: string): string {
 /**
  * Format status change information
  * @param payload Prowlarr webhook payload
- * @returns Formatted status change string
+ * @returns Formatted status change string, returns 'N/A' if no status information available
  */
 function formatStatusChange(payload: ProwlarrWebhookPayload): string {
   if (payload.previousStatus && payload.newStatus) {
@@ -88,7 +102,52 @@ function formatStatusChange(payload: ProwlarrWebhookPayload): string {
   if (payload.previousStatus) {
     return escapeHtml(payload.previousStatus)
   }
-  return ''
+  // Return 'N/A' for events that don't have status information (e.g., Grab, IndexerUpdate, etc.)
+  return 'N/A'
+}
+
+/**
+ * Format release details as HTML for template
+ * @param release Release information from Prowlarr
+ * @returns HTML string with release details
+ */
+function formatReleaseDetails(release?: ProwlarrRelease): string {
+  if (!release) {
+    return ''
+  }
+
+  const items: string[] = []
+
+  const qualityName = release.quality?.quality?.name
+  const qualitySource = release.quality?.quality?.source
+  const resolution = release.quality?.quality?.resolution
+  if (qualityName || qualitySource || resolution) {
+    const qualityText = [qualityName, qualitySource, resolution && `${resolution}p`].filter(Boolean).join(' / ')
+    items.push(`<div class="stack-item">Quality: ${escapeHtml(qualityText)}</div>`)
+  }
+
+  if (release.releaseTitle) {
+    items.push(`<div class="stack-item">Title: ${escapeHtml(release.releaseTitle)}</div>`)
+  }
+
+  if (release.releaseGroup) {
+    items.push(`<div class="stack-item">Release Group: ${escapeHtml(release.releaseGroup)}</div>`)
+  }
+
+  const size = formatFileSize(release.size)
+  if (size) {
+    items.push(`<div class="stack-item">Size: ${escapeHtml(size)}</div>`)
+  }
+
+  if (release.indexer) {
+    items.push(`<div class="stack-item">Indexer: ${escapeHtml(release.indexer)}</div>`)
+  }
+
+  if (release.downloadClient || release.downloadClientName) {
+    items.push(`<div class="stack-item">Download Client: ${escapeHtml(release.downloadClientName ?? release.downloadClient ?? '')}</div>`)
+  }
+
+  return items.join('')
 }
 
 /**

@@ -46,11 +46,17 @@ export const POST = api(async (req: NextRequest) => {
     statusChange: variables.statusChange,
     message: variables.message,
     indexerDetails: variables.indexerDetails,
+    releaseDetails: variables.releaseDetails,
     applicationUrl: variables.applicationUrl,
   }
 
   const html = renderTemplate(template.html, templateVariables)
-  const subject = `[Prowlarr][${variables.eventType}] ${variables.indexerName}`
+
+  // For Grab events, use release title if available, otherwise use indexer name
+  let subject = `[Prowlarr][${variables.eventType}] ${variables.indexerName}`
+  if (payload.eventType === 'Grab' && payload.release?.releaseTitle) {
+    subject = `[Prowlarr][Grab] ${payload.release.releaseTitle}`
+  }
 
   await sendNotification(subject, html)
 

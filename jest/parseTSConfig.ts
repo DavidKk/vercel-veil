@@ -1,7 +1,7 @@
 import path from 'path'
 import ts from 'typescript'
 
-/** 解析 tsconfig 文件 */
+/** Parse tsconfig file */
 export const parseTSConfig = (configFile = 'tsconfig.json') => {
   const configPath = ts.findConfigFile('./', ts.sys.fileExists, configFile)!
   const readConfigFile = ts.readJsonConfigFile(configPath, ts.sys.readFile)

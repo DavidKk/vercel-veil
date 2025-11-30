@@ -1,4 +1,4 @@
-export type ProwlarrEventType = 'Test' | 'IndexerStatusChange' | 'IndexerUpdate' | 'IndexerDelete' | 'IndexerAdded' | string
+export type ProwlarrEventType = 'Test' | 'Grab' | 'IndexerStatusChange' | 'IndexerUpdate' | 'IndexerDelete' | 'IndexerAdded' | string
 
 export interface ProwlarrIndexer {
   id?: number
@@ -16,12 +16,36 @@ export interface ProwlarrIndexer {
   appProfileId?: number
 }
 
+export interface ProwlarrQuality {
+  quality?: {
+    name?: string
+    source?: string
+    resolution?: number
+  }
+  revision?: {
+    version?: number
+    real?: number
+    isRepack?: boolean
+  }
+}
+
+export interface ProwlarrRelease {
+  quality?: ProwlarrQuality
+  releaseGroup?: string
+  releaseTitle?: string
+  indexer?: string
+  size?: number
+  downloadClient?: string
+  downloadClientName?: string
+}
+
 export interface ProwlarrWebhookPayload {
   eventType: ProwlarrEventType
   instanceName?: string
   applicationUrl?: string
   indexer?: ProwlarrIndexer
   indexers?: ProwlarrIndexer[]
+  release?: ProwlarrRelease
   message?: string
   previousStatus?: string
   newStatus?: string

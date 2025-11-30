@@ -130,7 +130,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
               rel="noopener noreferrer"
               className="flex-1 rounded-lg bg-orange-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-orange-700"
             >
-              猫眼
+              Maoyan
             </a>
           )}
           {movie.tmdbUrl && (

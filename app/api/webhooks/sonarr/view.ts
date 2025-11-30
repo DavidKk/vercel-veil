@@ -69,19 +69,19 @@ export async function prepareSonarrTemplateVariables(payload: SonarrWebhookPaylo
 }
 
 /**
- * Convert event type to localized Chinese label
+ * Convert event type to localized label
  * @param eventType Event type string
- * @returns Localized label in Chinese
+ * @returns Localized label
  */
 function getActionLabel(eventType: string): string {
   const labels: Record<string, string> = {
-    Test: '测试',
-    Grab: '抓取',
-    Download: '下载完成',
-    Upgrade: '制品替换',
-    Rename: '重命名',
-    EpisodeFileDelete: '删除文件',
-    SeriesDelete: '删除剧集',
+    Test: 'Test',
+    Grab: 'Grab',
+    Download: 'Download Complete',
+    Upgrade: 'Upgrade',
+    Rename: 'Rename',
+    EpisodeFileDelete: 'Delete File',
+    SeriesDelete: 'Delete Series',
   }
   return labels[eventType] ?? eventType
 }

@@ -1,14 +1,14 @@
 /**
- * 猫眼电影 API 类型定义
+ * Maoyan Movie API type definitions
  */
 
-/** 最受好评电影列表响应 */
+/** Top rated movies list response */
 export interface TopRatedMoviesResponse {
   title: string
   movieList: MovieListItem[]
 }
 
-/** 最受好评电影项 */
+/** Top rated movie item */
 export interface MovieListItem {
   movieId: number
   poster: string
@@ -16,13 +16,13 @@ export interface MovieListItem {
   name: string
 }
 
-/** 最受期待电影列表响应 */
+/** Most expected movies list response */
 export interface MostExpectedResponse {
   coming: ComingMovie[]
   paging: Paging
 }
 
-/** 最受期待电影项 */
+/** Most expected movie item */
 export interface ComingMovie {
   id: number
   img: string
@@ -32,7 +32,7 @@ export interface ComingMovie {
   comingTitle: string
 }
 
-/** 分页信息 */
+/** Pagination information */
 export interface Paging {
   hasMore: boolean
   limit: number
@@ -40,19 +40,19 @@ export interface Paging {
   total: number
 }
 
-/** 合并后的电影数据 */
+/** Merged movie data */
 export interface MergedMovie {
-  // 猫眼数据
+  // Maoyan data
   maoyanId: number | string
   name: string
   poster: string
   score?: string
   wish?: number
   source: 'topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming'
-  sources: ('topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming')[] // 可能同时出现在多个列表中
-  maoyanUrl?: string // 猫眼电影详情页URL
+  sources: ('topRated' | 'mostExpected' | 'tmdbPopular' | 'tmdbUpcoming')[] // May appear in multiple lists
+  maoyanUrl?: string // Maoyan movie detail page URL
 
-  // TMDB 数据（通过搜索获取）
+  // TMDB data (obtained through search)
   tmdbId?: number
   tmdbPoster?: string
   overview?: string
@@ -60,5 +60,5 @@ export interface MergedMovie {
   year?: number
   rating?: number
   tmdbUrl?: string
-  genres?: string[] // 电影类型（如：动作、喜剧、剧情等）
+  genres?: string[] // Movie genres (e.g., Action, Comedy, Drama, etc.)
 }

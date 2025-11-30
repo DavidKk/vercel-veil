@@ -71,7 +71,7 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
                       rel="noopener noreferrer"
                       className="rounded-lg bg-gradient-to-r from-orange-600 to-red-600 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm transition-all hover:from-orange-700 hover:to-red-700 active:scale-95"
                     >
-                      猫眼
+                      Maoyan
                     </a>
                   )}
                   {movie.tmdbUrl && (

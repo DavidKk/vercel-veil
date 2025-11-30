@@ -67,18 +67,18 @@ export async function prepareRadarrTemplateVariables(payload: RadarrWebhookPaylo
 }
 
 /**
- * Convert event type to localized Chinese label
+ * Convert event type to localized label
  * @param eventType Event type string
- * @returns Localized label in Chinese
+ * @returns Localized label
  */
 function getActionLabel(eventType: string): string {
   const labels: Record<string, string> = {
-    Test: '测试',
-    Grab: '抓取',
-    Download: '下载完成',
-    MovieDelete: '删除电影',
-    MovieFileDelete: '删除文件',
-    Upgrade: '制品替换',
+    Test: 'Test',
+    Grab: 'Grab',
+    Download: 'Download Complete',
+    MovieDelete: 'Delete Movie',
+    MovieFileDelete: 'Delete File',
+    Upgrade: 'Upgrade',
   }
   return labels[eventType] ?? eventType
 }
