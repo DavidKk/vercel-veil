@@ -86,7 +86,11 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
                       TMDB
                     </a>
                   )}
-                  {movie.year && <span className="rounded-lg bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">{movie.year}</span>}
+                  {movie.year && (
+                    <Tooltip content="Release Year" position="top">
+                      <span className="rounded-lg bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">{movie.year}</span>
+                    </Tooltip>
+                  )}
                   {/* Rating - Priority: TMDB rating > Maoyan score */}
                   {(movie.rating || movie.score) && (
                     <Tooltip content={movie.rating ? 'TMDB Rating' : 'Maoyan Score'} position="top">
@@ -96,12 +100,20 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
                       </span>
                     </Tooltip>
                   )}
-                  {movie.wish !== undefined && movie.wish > 0 && (
-                    <span className="flex items-center gap-1.5 rounded-lg bg-pink-500/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-                      <Heart size={14} className="fill-pink-400 text-pink-400" />
-                      <span>{movie.wish.toLocaleString()}</span>
-                    </span>
-                  )}
+                  {(() => {
+                    const wishCount = movie.wish || 0
+                    const tmdbCount = movie.tmdbVoteCount || 0
+                    const displayCount = Math.max(wishCount, tmdbCount)
+                    const source = tmdbCount > wishCount ? 'TMDB Vote Count' : 'Maoyan Wish Count'
+                    return displayCount > 0 ? (
+                      <Tooltip content={source} position="top">
+                        <span className="flex items-center gap-1.5 rounded-lg bg-pink-500/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                          <Heart size={14} className="fill-pink-400 text-pink-400" />
+                          <span>{displayCount.toLocaleString()}</span>
+                        </span>
+                      </Tooltip>
+                    ) : null
+                  })()}
                 </div>
                 {/* Genres */}
                 {movie.genres && movie.genres.length > 0 && (
@@ -153,10 +165,10 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
               )}
             </div>
 
-            {/* Overview */}
+            {/* Overview - Preserve line breaks */}
             {movie.overview && (
               <div className="flex-1 min-h-0 overflow-hidden">
-                <p className="text-sm leading-relaxed text-white/90 cursor-pointer line-clamp-6" onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}>
+                <p className="text-sm leading-relaxed text-white/90 cursor-pointer line-clamp-6 whitespace-pre-line" onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}>
                   {movie.overview}
                 </p>
               </div>

@@ -133,6 +133,10 @@ async function enrichMovieWithSearchResult(movie: MergedMovie): Promise<{ movie:
         movie.rating = movieResult.vote_average
       }
 
+      if ('vote_count' in movieResult && movieResult.vote_count) {
+        movie.tmdbVoteCount = movieResult.vote_count
+      }
+
       const genreIds = movieResult.genre_ids || []
 
       return { movie, needsDetails, genreIds }
@@ -208,6 +212,10 @@ async function batchEnrichMoviesWithTMDB(movies: MergedMovie[], tmdbTitleMap?: M
 
         if (tmdbMovie.vote_average) {
           enriched.rating = tmdbMovie.vote_average
+        }
+
+        if (tmdbMovie.vote_count) {
+          enriched.tmdbVoteCount = tmdbMovie.vote_count
         }
 
         enrichedMovies[i] = enriched
@@ -333,6 +341,10 @@ async function convertTMDBMovieToMergedMovie(tmdbMovie: TMDBMovie, source: 'tmdb
     movie.rating = tmdbMovie.vote_average
   }
 
+  if (tmdbMovie.vote_count) {
+    movie.tmdbVoteCount = tmdbMovie.vote_count
+  }
+
   // Get genre names from genre IDs
   if (tmdbMovie.genre_ids && tmdbMovie.genre_ids.length > 0) {
     try {
@@ -446,6 +458,10 @@ async function mergeTMDBMovies(movieMap: Map<string, MergedMovie>, tmdbMovies: T
         }
         if (tmdbMovie.vote_average) {
           existing.rating = tmdbMovie.vote_average
+        }
+
+        if (tmdbMovie.vote_count) {
+          existing.tmdbVoteCount = tmdbMovie.vote_count
         }
         // Get genre names from genre IDs
         if (tmdbMovie.genre_ids && tmdbMovie.genre_ids.length > 0) {

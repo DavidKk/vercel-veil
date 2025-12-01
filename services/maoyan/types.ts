@@ -59,6 +59,7 @@ export interface MergedMovie {
   releaseDate?: string
   year?: number
   rating?: number
+  tmdbVoteCount?: number // TMDB vote count (similar to Maoyan wish count)
   tmdbUrl?: string
   genres?: string[] // Movie genres (e.g., Action, Comedy, Drama, etc.)
 

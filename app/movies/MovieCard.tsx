@@ -66,14 +66,19 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
         {/* Source Badge */}
         {sourceBadgeText && <div className="absolute right-2 top-2 rounded-full bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-lg">{sourceBadgeText}</div>}
         {/* Wish Overlay */}
-        {movie.wish !== undefined && movie.wish > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
-            <div className="flex items-center gap-1 text-white">
-              <Heart size={16} className="fill-pink-400 text-pink-400" />
-              <span className="text-xs">{movie.wish.toLocaleString()} want to watch</span>
+        {(() => {
+          const wishCount = movie.wish || 0
+          const tmdbCount = movie.tmdbVoteCount || 0
+          const displayCount = Math.max(wishCount, tmdbCount)
+          return displayCount > 0 ? (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
+              <div className="flex items-center gap-1 text-white">
+                <Heart size={16} className="fill-pink-400 text-pink-400" />
+                <span className="text-xs">{displayCount.toLocaleString()}</span>
+              </div>
             </div>
-          </div>
-        )}
+          ) : null
+        })()}
       </div>
 
       {/* Movie Information */}
@@ -106,7 +111,11 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
               </a>
             )}
             {/* Year */}
-            {movie.year && <span className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">{movie.year}</span>}
+            {movie.year && (
+              <Tooltip content="Release Year" position="top">
+                <span className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">{movie.year}</span>
+              </Tooltip>
+            )}
             {/* Rating - Priority: TMDB rating > Maoyan score */}
             {(movie.rating || movie.score) && (
               <Tooltip content={movie.rating ? 'TMDB Rating' : 'Maoyan Score'} position="top">
@@ -116,13 +125,21 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
                 </span>
               </Tooltip>
             )}
-            {/* Wish count */}
-            {movie.wish !== undefined && movie.wish > 0 && (
-              <span className="flex items-center gap-1 rounded-lg bg-pink-50 px-3 py-1 text-xs font-semibold text-pink-700">
-                <Heart size={12} className="fill-pink-500 text-pink-500" />
-                {movie.wish.toLocaleString()}
-              </span>
-            )}
+            {/* Wish/Vote count - Show the higher value */}
+            {(() => {
+              const wishCount = movie.wish || 0
+              const tmdbCount = movie.tmdbVoteCount || 0
+              const displayCount = Math.max(wishCount, tmdbCount)
+              const source = tmdbCount > wishCount ? 'TMDB Vote Count' : 'Maoyan Wish Count'
+              return displayCount > 0 ? (
+                <Tooltip content={source} position="top">
+                  <span className="flex items-center gap-1 rounded-lg bg-pink-50 px-3 py-1 text-xs font-semibold text-pink-700">
+                    <Heart size={12} className="fill-pink-500 text-pink-500" />
+                    {displayCount.toLocaleString()}
+                  </span>
+                </Tooltip>
+              ) : null
+            })()}
           </div>
           {/* Genres */}
           {movie.genres && movie.genres.length > 0 && (
@@ -136,8 +153,8 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
           )}
         </div>
 
-        {/* Overview */}
-        {movie.overview && <p className="line-clamp-3 flex-1 text-sm leading-relaxed text-gray-600">{movie.overview}</p>}
+        {/* Overview - Full text on desktop (masonry layout), preserve line breaks */}
+        {movie.overview && <p className="flex-1 text-sm leading-relaxed text-gray-600 whitespace-pre-line">{movie.overview}</p>}
 
         {/* Favorite Button - Use mt-auto to push to bottom */}
         {movie.tmdbId && favoriteAvailable && (

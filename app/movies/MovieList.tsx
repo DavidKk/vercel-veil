@@ -89,16 +89,12 @@ export default function MovieList({ movies, favoriteAvailable, favoriteIds, shar
         </div>
       </div>
 
-      {/* Movie Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {/* Movie Masonry Layout - Desktop only */}
+      <div className="columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4">
         {sortedMovies.map((movie) => (
-          <MovieCard
-            key={`${movie.source}-${movie.maoyanId}`}
-            movie={movie}
-            favoriteAvailable={favoriteAvailable}
-            isFavorited={movie.tmdbId ? favoriteIds.has(movie.tmdbId) : false}
-            shareToken={shareToken}
-          />
+          <div key={`${movie.source}-${movie.maoyanId}`} className="break-inside-avoid mb-6">
+            <MovieCard movie={movie} favoriteAvailable={favoriteAvailable} isFavorited={movie.tmdbId ? favoriteIds.has(movie.tmdbId) : false} shareToken={shareToken} />
+          </div>
         ))}
       </div>
     </div>
