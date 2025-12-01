@@ -1,6 +1,7 @@
 'use client'
 
 import { useRequest } from 'ahooks'
+import { Check, FileText, Info, X } from 'feather-icons-react'
 import { useRef, useState } from 'react'
 
 import type { AlertImperativeHandler } from '@/components/Alert'
@@ -143,15 +144,7 @@ export default function DoubanTest() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${result.code === 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                    {result.code === 0 ? (
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    )}
+                    {result.code === 0 ? <Check size={24} /> : <X size={24} />}
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Test Result</h2>
@@ -173,9 +166,7 @@ export default function DoubanTest() {
               {result.message && (
                 <div className={`mb-6 rounded-lg border-l-4 p-4 ${result.code === 0 ? 'border-green-400 bg-green-50 text-green-800' : 'border-red-400 bg-red-50 text-red-800'}`}>
                   <div className="flex items-start gap-2">
-                    <svg className="mt-0.5 h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <Info size={20} className="mt-0.5 flex-shrink-0" />
                     <p className="text-sm font-medium">{result.message}</p>
                   </div>
                 </div>
@@ -187,14 +178,7 @@ export default function DoubanTest() {
                   <div className="border-b border-gray-200 bg-white px-4 py-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <FileText size={16} className="text-gray-400" />
                         <span className="text-sm font-semibold text-gray-900">Response Data</span>
                       </div>
                       <div className="flex items-center gap-2">

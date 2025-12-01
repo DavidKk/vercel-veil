@@ -1,12 +1,13 @@
 'use client'
 
-import { Heart } from 'feather-icons-react'
+import { Heart, Star } from 'feather-icons-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { favoriteMovie } from '@/app/actions/movies'
 import { favoriteMovieWithToken } from '@/app/actions/movies-share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
+import Tooltip from '@/components/Tooltip'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import LazyImage from './components/LazyImage'
@@ -64,86 +65,83 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
         />
         {/* Source Badge */}
         {sourceBadgeText && <div className="absolute right-2 top-2 rounded-full bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-lg">{sourceBadgeText}</div>}
-        {/* Rating/Wish Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
-          <div className="flex flex-col gap-1">
-            {movie.score && (
-              <div className="flex items-center gap-1 text-white">
-                <svg className="h-4 w-4 fill-yellow-400" viewBox="0 0 20 20">
-                  <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                </svg>
-                <span className="text-sm font-semibold">{movie.score}</span>
-              </div>
-            )}
-            {movie.wish !== undefined && movie.wish > 0 && (
-              <div className="flex items-center gap-1 text-white">
-                <svg className="h-4 w-4 fill-pink-400" viewBox="0 0 20 20">
-                  <path d="M10 18.35l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 4.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 4.42 22 7.5c0 3.78-3.4 6.86-6.55 9.54L10 18.35z" />
-                </svg>
-                <span className="text-xs">{movie.wish.toLocaleString()} want to watch</span>
-              </div>
-            )}
+        {/* Wish Overlay */}
+        {movie.wish !== undefined && movie.wish > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
+            <div className="flex items-center gap-1 text-white">
+              <Heart size={16} className="fill-pink-400 text-pink-400" />
+              <span className="text-xs">{movie.wish.toLocaleString()} want to watch</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Movie Information */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
         <h3 className="line-clamp-2 text-lg font-semibold text-gray-900">{movie.name}</h3>
 
-        {/* TMDB Information */}
-        {movie.tmdbId && (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-              {movie.year && <span className="rounded bg-gray-100 px-2 py-0.5">{movie.year}</span>}
-              {movie.rating && (
-                <span className="flex items-center gap-1 rounded bg-yellow-50 px-2 py-0.5 text-yellow-700">
-                  <svg className="h-3 w-3 fill-yellow-500" viewBox="0 0 20 20">
-                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                  </svg>
-                  {movie.rating.toFixed(1)}
+        {/* Tags and Information */}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {/* Source tags */}
+            {movie.maoyanUrl && (
+              <a
+                href={movie.maoyanUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-gradient-to-r from-orange-600 to-red-600 px-3 py-1 text-xs font-semibold text-white transition-all hover:from-orange-700 hover:to-red-700 active:scale-95"
+              >
+                {/* Maoyan brand name in Chinese - keep as Chinese logo, no need to translate */}
+                猫眼
+              </a>
+            )}
+            {movie.tmdbUrl && (
+              <a
+                href={movie.tmdbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-1 text-xs font-semibold text-white transition-all hover:from-indigo-700 hover:to-purple-700 active:scale-95"
+              >
+                TMDB
+              </a>
+            )}
+            {/* Year */}
+            {movie.year && <span className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">{movie.year}</span>}
+            {/* Rating - Priority: TMDB rating > Maoyan score */}
+            {(movie.rating || movie.score) && (
+              <Tooltip content={movie.rating ? 'TMDB Rating' : 'Maoyan Score'} position="top">
+                <span className="flex items-center gap-1 rounded-lg bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-700">
+                  <Star size={12} className="fill-yellow-500 text-yellow-500" />
+                  {movie.rating ? movie.rating.toFixed(1) : movie.score}
                 </span>
-              )}
-            </div>
-            {/* Genres */}
-            {movie.genres && movie.genres.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {movie.genres.slice(0, 3).map((genre, index) => (
-                  <span key={index} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                    {genre}
-                  </span>
-                ))}
-              </div>
+              </Tooltip>
+            )}
+            {/* Wish count */}
+            {movie.wish !== undefined && movie.wish > 0 && (
+              <span className="flex items-center gap-1 rounded-lg bg-pink-50 px-3 py-1 text-xs font-semibold text-pink-700">
+                <Heart size={12} className="fill-pink-500 text-pink-500" />
+                {movie.wish.toLocaleString()}
+              </span>
             )}
           </div>
-        )}
+          {/* Genres */}
+          {movie.genres && movie.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {movie.genres.slice(0, 3).map((genre, index) => (
+                <span key={index} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                  {genre}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Overview */}
         {movie.overview && <p className="line-clamp-3 flex-1 text-sm leading-relaxed text-gray-600">{movie.overview}</p>}
 
-        {/* Action Buttons - Use mt-auto to push to bottom */}
-        <div className="mt-auto flex gap-2">
-          {movie.maoyanUrl && (
-            <a
-              href={movie.maoyanUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 rounded-lg bg-orange-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-orange-700"
-            >
-              猫眼
-            </a>
-          )}
-          {movie.tmdbUrl && (
-            <a
-              href={movie.tmdbUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-indigo-700"
-            >
-              TMDB
-            </a>
-          )}
-          {movie.tmdbId && favoriteAvailable && (
+        {/* Favorite Button - Use mt-auto to push to bottom */}
+        {movie.tmdbId && favoriteAvailable && (
+          <div className="mt-auto">
             <button
               onClick={async () => {
                 if (!movie.tmdbId || isFavoriting) return
@@ -174,7 +172,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
                 }
               }}
               disabled={isFavoriting}
-              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
                 isFavorited ? 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700' : 'border-indigo-600 text-indigo-600 hover:bg-indigo-50'
               } disabled:cursor-not-allowed disabled:opacity-50`}
               title={isFavorited ? 'Remove from favorites' : 'Add to TMDB favorites'}
@@ -182,8 +180,8 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
               <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
               <span>{isFavoriting ? 'Processing...' : isFavorited ? 'Favorited' : 'Favorite'}</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <Alert ref={alertRef} />
     </div>

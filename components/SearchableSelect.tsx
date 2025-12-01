@@ -1,5 +1,6 @@
 'use client'
 
+import { ChevronDown } from 'feather-icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useIsMobile } from '@/hooks/useMobile'
@@ -220,14 +221,7 @@ export default function SearchableSelect(props: SearchableSelectProps) {
           </button>
         ) : (
           <div className="pointer-events-none">
-            <svg
-              className={cn('text-gray-400', isOpen ? 'rotate-180' : '', 'transition-transform', size === 'sm' ? 'h-4 w-4' : size === 'md' ? 'h-5 w-5' : 'h-6 w-6')}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown size={size === 'sm' ? 16 : size === 'md' ? 20 : 24} className={cn('text-gray-400', isOpen ? 'rotate-180' : '', 'transition-transform')} />
           </div>
         )}
       </div>

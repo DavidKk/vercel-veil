@@ -7,6 +7,7 @@ import { favoriteMovie } from '@/app/actions/movies'
 import { favoriteMovieWithToken } from '@/app/actions/movies-share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
+import Tooltip from '@/components/Tooltip'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import LazyImage from './components/LazyImage'
@@ -71,6 +72,7 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
                       rel="noopener noreferrer"
                       className="rounded-lg bg-gradient-to-r from-orange-600 to-red-600 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm transition-all hover:from-orange-700 hover:to-red-700 active:scale-95"
                     >
+                      {/* Maoyan brand name in Chinese - keep as Chinese logo, no need to translate */}
                       猫眼
                     </a>
                   )}
@@ -85,11 +87,14 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
                     </a>
                   )}
                   {movie.year && <span className="rounded-lg bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">{movie.year}</span>}
-                  {movie.rating && (
-                    <span className="flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-                      <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                      <span>{movie.rating.toFixed(1)}</span>
-                    </span>
+                  {/* Rating - Priority: TMDB rating > Maoyan score */}
+                  {(movie.rating || movie.score) && (
+                    <Tooltip content={movie.rating ? 'TMDB Rating' : 'Maoyan Score'} position="top">
+                      <span className="flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                        <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                        <span>{movie.rating ? movie.rating.toFixed(1) : movie.score}</span>
+                      </span>
+                    </Tooltip>
                   )}
                   {movie.wish !== undefined && movie.wish > 0 && (
                     <span className="flex items-center gap-1.5 rounded-lg bg-pink-500/20 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
