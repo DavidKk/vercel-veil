@@ -1,7 +1,7 @@
-import { shouldUpdate } from '@/services/movies-cache'
+import { shouldUpdate } from '@/services/movies'
 
 // Mock Date.now() for time-based tests
-describe('services/movies-cache', () => {
+describe('services/movies', () => {
   beforeEach(() => {
     jest.useRealTimers()
   })

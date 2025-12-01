@@ -38,20 +38,20 @@ export function TemplateToolbar({
   }))
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <label className="block text-sm font-semibold text-gray-900">Select Template</label>
+        <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide">Template</label>
         <SearchableSelect value={selectedId} options={templateOptions} onChange={(value) => onSelect(value as string)} placeholder="Select template..." size="sm" />
-        {currentTemplate?.description ? <p className="text-xs text-gray-600">{currentTemplate.description}</p> : null}
+        {currentTemplate?.description ? <p className="mt-1 text-xs text-gray-500">{currentTemplate.description}</p> : null}
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-semibold text-gray-900">Variables JSON</label>
-          {jsonError ? <span className="text-xs text-red-600">{jsonError}</span> : null}
+          <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide">Variables</label>
+          {jsonError ? <span className="text-xs font-medium text-red-600">{jsonError}</span> : null}
         </div>
         <textarea
-          className="h-64 w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="min-h-[200px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={jsonInput}
           onChange={(event) => onJsonChange(event.target.value)}
           placeholder="Enter JSON variables..."
@@ -60,11 +60,11 @@ export function TemplateToolbar({
 
       {currentTemplate ? (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-gray-900">Available Variables</p>
-          <div className="rounded-md border border-gray-200 bg-white p-3 shadow-sm">
-            <div className="flex flex-wrap gap-2">
+          <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide">Available Variables</label>
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+            <div className="flex flex-wrap gap-1.5">
               {currentTemplate.variables.map((variable) => (
-                <span key={variable} className="inline-flex items-center rounded bg-gray-100 px-2 py-1 text-xs font-mono text-gray-700 ring-1 ring-inset ring-gray-200">
+                <span key={variable} className="inline-flex items-center rounded-md bg-white px-2 py-1 text-xs font-mono text-gray-700 ring-1 ring-inset ring-gray-200">
                   {variable}
                 </span>
               ))}
@@ -73,24 +73,24 @@ export function TemplateToolbar({
         </div>
       ) : null}
 
-      <div className="mt-auto flex flex-col gap-3 pt-2">
+      <div className="mt-auto flex flex-col gap-3 border-t border-gray-200 pt-4">
         <button
           type="button"
           disabled={sending || disableSend}
           onClick={onSendTest}
-          className="w-full inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:hover:bg-gray-400"
+          className="w-full inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:hover:bg-gray-400"
         >
           {sending ? 'Sending...' : 'Send Test Email'}
         </button>
 
         {sendStatus === 'success' ? (
           <div className="rounded-md bg-green-50 p-3 ring-1 ring-green-200">
-            <p className="text-sm text-green-800">{sendMessage || 'Email sent successfully, please check your inbox'}</p>
+            <p className="text-xs text-green-800">{sendMessage || 'Email sent successfully, please check your inbox'}</p>
           </div>
         ) : null}
         {sendStatus === 'error' ? (
           <div className="rounded-md bg-red-50 p-3 ring-1 ring-red-200">
-            <p className="text-sm text-red-800">{sendMessage || 'Failed to send email, please try again later'}</p>
+            <p className="text-xs text-red-800">{sendMessage || 'Failed to send email, please try again later'}</p>
           </div>
         ) : null}
       </div>

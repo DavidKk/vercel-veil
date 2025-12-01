@@ -2,48 +2,9 @@ import { getGistInfo, readGistFile, writeGistFile } from '@/services/gist'
 import { info, warn } from '@/services/logger'
 import type { MergedMovie } from '@/services/maoyan/types'
 
-/**
- * Movies cache data structure
- */
-export interface MoviesCacheData {
-  current: {
-    date: string // UTC date, e.g., "2024-01-15"
-    timestamp: number // UTC timestamp (data update time)
-    movies: MergedMovie[]
-    metadata: {
-      totalCount: number
-      description: string
-    }
-  }
-  previous: {
-    date: string // UTC date
-    timestamp: number // UTC timestamp
-    movies: MergedMovie[]
-    metadata: {
-      totalCount: number
-      description: string
-    }
-  }
-}
-
-/**
- * Update windows: UTC 04:00, 12:00, 20:00 (each window lasts 1 hour)
- * Data is valid for 8 hours after each update
- */
-const UPDATE_WINDOWS = [4, 12, 20] as const
-const UPDATE_WINDOW_DURATION = 1 // 1 hour
-const DATA_VALIDITY_DURATION = 8 * 60 * 60 * 1000 // 8 hours in milliseconds
-
-/**
- * GIST file name for movies cache
- * Note: GIST API does not support nested paths, so we use a simple filename
- */
-const GIST_FILE_NAME = 'movies.json'
-
-/**
- * Result cache key
- */
-export const RESULT_CACHE_KEY = 'movies-cache:result'
+import { DATA_VALIDITY_DURATION, GIST_FILE_NAME, RESULT_CACHE_KEY, UPDATE_WINDOW_DURATION, UPDATE_WINDOWS } from './constants'
+import { findExistingMovie } from './index'
+import type { MoviesCacheData } from './types'
 
 /**
  * Result cache storage (in-memory, similar to fetchWithCache)
@@ -210,33 +171,6 @@ export async function saveMoviesToGist(data: MoviesCacheData): Promise<void> {
   })
 
   info('Movies cache saved to GIST')
-}
-
-/**
- * Find existing movie in previous movies list
- * Matching rules: maoyanId > tmdbId > name (lowercase, trimmed)
- */
-export function findExistingMovie(previousMovies: MergedMovie[], newMovie: MergedMovie): MergedMovie | undefined {
-  for (const previous of previousMovies) {
-    // Match by maoyanId (if both exist)
-    if (newMovie.maoyanId && previous.maoyanId && String(newMovie.maoyanId) === String(previous.maoyanId)) {
-      return previous
-    }
-
-    // Match by tmdbId (if both exist)
-    if (newMovie.tmdbId && previous.tmdbId && newMovie.tmdbId === previous.tmdbId) {
-      return previous
-    }
-
-    // Match by name (case-insensitive, trimmed)
-    const newName = newMovie.name.toLowerCase().trim()
-    const prevName = previous.name.toLowerCase().trim()
-    if (newName && prevName && newName === prevName) {
-      return previous
-    }
-  }
-
-  return undefined
 }
 
 /**

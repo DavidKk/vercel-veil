@@ -73,5 +73,8 @@ declare namespace NodeJS {
 
     /** Vercel Cron Job secret for authorization (Vercel adds this to Authorization header) */
     CRON_SECRET?: string
+
+    /** Custom base URL for the application (e.g., "https://example.com" or "example.com") */
+    APP_BASE_URL?: string
   }
 }

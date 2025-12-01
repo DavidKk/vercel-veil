@@ -36,10 +36,10 @@ jest.mock('@/services/logger', () => ({
   warn: jest.fn(),
 }))
 
-import { favoriteMovie, getFavoriteMovieIds, getMoviesList, getMoviesListWithGistCache, isFavoriteFeatureAvailable } from '@/app/actions/movies'
+import { favoriteMovie, getFavoriteMovieIds, getMoviesList, getMoviesListWithGistCache, isFavoriteFeatureAvailable } from '@/app/actions/movies/index'
 import { validateCookie } from '@/services/auth/access'
 import { getMergedMoviesList, getMergedMoviesListWithoutCache } from '@/services/maoyan'
-import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from '@/services/movies-cache'
+import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 

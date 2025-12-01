@@ -3,8 +3,8 @@
 import { Heart, Star } from 'feather-icons-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { favoriteMovie } from '@/app/actions/movies'
-import { favoriteMovieWithToken } from '@/app/actions/movies-share'
+import { favoriteMovie } from '@/app/actions/movies/index'
+import { favoriteMovieWithToken } from '@/app/actions/movies/share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
 import Tooltip from '@/components/Tooltip'

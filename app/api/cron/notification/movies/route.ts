@@ -1,0 +1,73 @@
+import type { NextRequest } from 'next/server'
+
+import { cron } from '@/initializer/controller'
+import { fail, info } from '@/services/logger'
+import { getMoviesFromGist, getNewMoviesFromCache } from '@/services/movies'
+import { sendNotification } from '@/services/resend'
+import { getTemplate, renderTemplate } from '@/services/templates/registry'
+import { generateShareToken } from '@/utils/jwt'
+import { getBaseUrl } from '@/utils/url'
+
+export const runtime = 'nodejs'
+
+/**
+ * Movies notification cron job
+ * Checks for new movies in GIST cache and sends email notification if new movies are found
+ * @param req Next.js request object
+ * @returns Response with notification results
+ */
+export const GET = cron(async (req: NextRequest) => {
+  info('Movies notification cron job started')
+
+  // Get new movies from cache
+  const newMovies = getNewMoviesFromCache(await getMoviesFromGist())
+
+  if (newMovies.length === 0) {
+    info('No new movies found, skipping notification')
+    return { success: true, notified: false }
+  }
+
+  info(`Found ${newMovies.length} new movies, preparing notification email`)
+
+  // Generate share token
+  const shareToken = generateShareToken('movie-share', '1d')
+  const baseUrl = getBaseUrl(req)
+  const shareUrl = `${baseUrl}/movies/share/${shareToken}`
+
+  // Get email template
+  const template = getTemplate('movies-new')
+  if (!template) {
+    fail('Template not found: movies-new')
+    throw new Error('Email template not found')
+  }
+
+  // Prepare template variables
+  const currentDate = new Date().toISOString().split('T')[0]
+
+  // Prepare movies data for template (raw data, no HTML formatting)
+  const moviesForTemplate = newMovies.map((movie) => ({
+    poster: movie.tmdbPoster || movie.poster || 'https://via.placeholder.com/80x120?text=No+Image',
+    name: movie.name || 'Unknown',
+    year: movie.year || null,
+    score: movie.score || null,
+    releaseDate: movie.releaseDate || null,
+  }))
+
+  const templateVariables: Record<string, string> = {
+    newMoviesCount: String(newMovies.length),
+    newMoviesJSON: JSON.stringify(moviesForTemplate),
+    shareUrl,
+    currentDate,
+  }
+
+  // Render email HTML
+  const html = renderTemplate(template.html, templateVariables)
+
+  // Send email notification
+  const subject = `[Movies] Found ${newMovies.length} new movie${newMovies.length > 1 ? 's' : ''}`
+  await sendNotification(subject, html)
+
+  info(`Notification email sent successfully for ${newMovies.length} new movies`)
+
+  return { success: true, notified: true, newMoviesCount: newMovies.length }
+})

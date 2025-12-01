@@ -4,7 +4,7 @@ import { validateCookie } from '@/services/auth/access'
 import { fail, info, warn } from '@/services/logger'
 import { getMergedMoviesList, type GetMergedMoviesListOptions, getMergedMoviesListWithoutCache } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
-import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from '@/services/movies-cache'
+import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 

@@ -6,9 +6,22 @@ import { hasTmdbApiKey } from '@/services/tmdb/env'
 import type { SeriesList } from '@/types/feed'
 import { chineseToNumber } from '@/utils/chineseToNumber'
 
+import { RSS_HEADERS } from './constants'
 import type { DoubanRSSDTO } from './types'
 
 export * from './types'
+
+/**
+ * Fetch Douban RSS feed
+ * @param url The URL of the Douban RSS feed
+ * @returns Promise<Response> The fetch response object
+ */
+export async function fetchDoubanRSS(url: string): Promise<Response> {
+  return fetch(url, {
+    method: 'GET',
+    headers: RSS_HEADERS,
+  })
+}
 
 export interface ExtractSeriesListFromDoubanRSSDTOOptions {
   onlySeries?: boolean

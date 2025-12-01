@@ -3,7 +3,7 @@
 import { Copy } from 'feather-icons-react'
 import { useEffect, useState } from 'react'
 
-import { generateShareToken } from '@/app/actions/movies-share'
+import { generateShareToken } from '@/app/actions/movies/share'
 import Modal from '@/components/Modal'
 
 interface ShareModalProps {

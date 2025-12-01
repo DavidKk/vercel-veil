@@ -1,4 +1,4 @@
-import { verifyShareToken } from '@/app/actions/movies-share'
+import { verifyShareToken } from '@/app/actions/movies/share'
 import { getMergedMoviesList } from '@/services/maoyan'
 import { getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'

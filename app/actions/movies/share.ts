@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 import { fail, info } from '@/services/logger'
 import { addToFavorites } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
+import { generateShareToken as createShareToken } from '@/utils/jwt'
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
@@ -40,12 +41,7 @@ export async function generateShareToken(): Promise<{ success: boolean; token?: 
     }
 
     // Generate token with 1 day expiration
-    const payload = {
-      type: 'movie-share',
-      timestamp: Date.now(),
-    }
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' })
+    const token = createShareToken('movie-share', '1d')
     const path = `/movies/share/${token}`
 
     const duration = Date.now() - startTime

@@ -3,7 +3,7 @@
 import { Share2 } from 'feather-icons-react'
 import { useRef, useState } from 'react'
 
-import { generateShareToken } from '@/app/actions/movies-share'
+import { generateShareToken } from '@/app/actions/movies/share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
 
