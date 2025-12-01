@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync/douban-to-tmdb?url=https%3A%2F%2Fwww.douban.com%2Ffeed%2Fpeople%2F148049852%2Finterests",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

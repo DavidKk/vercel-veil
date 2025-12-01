@@ -17,26 +17,39 @@ const RSS_HEADERS = {
 export const runtime = 'nodejs'
 
 /**
- * Sync Douban movie list to TMDB favorites webhook
- * Internal use only, requires authentication
+ * Verify if request is from Vercel Cron Job
+ * Vercel cron jobs always have User-Agent: vercel-cron/1.0
+ */
+function isVercelCronRequest(req: NextRequest): boolean {
+  const userAgent = req.headers.get('user-agent')
+  return userAgent === 'vercel-cron/1.0'
+}
+
+/**
+ * Sync Douban movie list to TMDB favorites cron job
+ * Called by Vercel Cron Jobs or manually with authentication
  * @param req Next.js request object
  * @returns Response with sync results
  */
-export const POST = api(async (req: NextRequest) => {
-  // Require webhook authentication (header token + username/password, or cookie for internal use)
-  await ensureWebhookAuthorized(req)
+export const GET = api(async (req: NextRequest) => {
+  // For Vercel Cron Jobs, verify User-Agent
+  if (!isVercelCronRequest(req)) {
+    // For non-cron requests, require webhook authentication
+    await ensureWebhookAuthorized(req)
+  }
 
   // Check if TMDB auth is configured
   if (!hasTmdbAuth()) {
     return jsonInvalidParameters('TMDB authentication not configured. Please set TMDB_SESSION_ID environment variable.')
   }
 
-  const body = (await req.json()) as { url?: string }
-  const url = body.url
+  // Get Douban RSS URL from query parameter
+  const { searchParams } = new URL(req.url)
+  const url = searchParams.get('url')
 
   if (typeof url !== 'string' || !url) {
-    fail('Missing url parameter')
-    return jsonInvalidParameters('url parameter is required')
+    fail('Missing url query parameter')
+    return jsonInvalidParameters('url query parameter is required (e.g., ?url=https://example.com/rss)')
   }
 
   try {
