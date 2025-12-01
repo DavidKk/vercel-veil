@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import { getHeaders, runWithContext } from '@/services/context'
+import { fail } from '@/services/logger'
 import { ensureWebhookAuthorized } from '@/utils/webhooks/auth'
 
 import { isStandardResponse, standardResponseError, stringifyUnknownError } from './response'
@@ -29,18 +30,20 @@ export function api<P>(handle: (req: NextRequest, context: ContextWithParams<P>)
         const collectHeaders = getHeaders()
         const headers = { ...collectHeaders, ...inputHeaders }
         return NextResponse.json(result, { status, headers })
-      } catch (error) {
-        if (error instanceof NextResponse) {
-          return error
+      } catch (err) {
+        if (err instanceof NextResponse) {
+          return err
         }
 
+        const errorMessage = stringifyUnknownError(err)
+        fail(`API handler error: ${errorMessage}`)
+
         const result = (() => {
-          if (isStandardResponse(error)) {
-            return error
+          if (isStandardResponse(err)) {
+            return err
           }
 
-          const message = stringifyUnknownError(error)
-          return standardResponseError(message)
+          return standardResponseError(errorMessage)
         })()
 
         return NextResponse.json(result, { status: 500 })
@@ -60,8 +63,9 @@ export function plainText<P>(handle: (req: NextRequest, context: ContextWithPara
         }
 
         return new NextResponse(result, { status: 200, headers })
-      } catch (error) {
-        const message = stringifyUnknownError(error)
+      } catch (err) {
+        const message = stringifyUnknownError(err)
+        fail(`PlainText handler error: ${message}`)
         return new NextResponse(message, { status: 500 })
       }
     })
@@ -78,8 +82,9 @@ export function buffer<P>(handle: (req: NextRequest, context: ContextWithParams<
           return result
         }
         return new NextResponse(result, { status: 200, headers })
-      } catch (error) {
-        const message = stringifyUnknownError(error)
+      } catch (err) {
+        const message = stringifyUnknownError(err)
+        fail(`PlainText handler error: ${message}`)
         return new NextResponse(message, { status: 500 })
       }
     })

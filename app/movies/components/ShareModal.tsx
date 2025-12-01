@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { generateShareToken } from '@/app/actions/movies/share'
 import Modal from '@/components/Modal'
+import { fail } from '@/services/logger'
 
 interface ShareModalProps {
   isOpen: boolean
@@ -28,10 +29,7 @@ export default function ShareModal({ isOpen, onClose }: ShareModalProps) {
       }
     } catch (error) {
       // Failed to generate share token
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.error('Failed to generate share token:', error)
-      }
+      fail('Failed to generate share token:', error)
     } finally {
       setIsGenerating(false)
     }
@@ -70,10 +68,7 @@ export default function ShareModal({ isOpen, onClose }: ShareModalProps) {
       }
     } catch (error) {
       // Failed to copy
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.error('Failed to copy:', error)
-      }
+      fail('Failed to copy:', error)
       // Show error message or fallback UI
       alert('Failed to copy. Please manually copy the URL.')
     }

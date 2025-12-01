@@ -1,6 +1,7 @@
 'use server'
 
 import packageJson from '@/package.json'
+import { fail } from '@/services/logger'
 import { formatProjectName } from '@/utils/format'
 
 const VERCEL_API_URL = 'https://api.vercel.com'
@@ -31,9 +32,7 @@ async function fetchVercelProjects(): Promise<any[]> {
 
 export async function getProjects(): Promise<VercelProject[]> {
   const projects = await fetchVercelProjects().catch((error) => {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching Vercel projects:', error)
-
+    fail('Error fetching Vercel projects:', error)
     return []
   })
 
