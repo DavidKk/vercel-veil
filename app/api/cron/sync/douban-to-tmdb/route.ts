@@ -1,5 +1,4 @@
 import { XMLParser } from 'fast-xml-parser'
-import type { NextRequest } from 'next/server'
 
 import { cron } from '@/initializer/controller'
 import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
@@ -16,19 +15,18 @@ export const runtime = 'nodejs'
  * @param req Next.js request object
  * @returns Response with sync results
  */
-export const GET = cron(async (req: NextRequest) => {
+export const GET = cron(async () => {
   // Check if TMDB auth is configured
   if (!hasTmdbAuth()) {
     return jsonInvalidParameters('TMDB authentication not configured. Please set TMDB_SESSION_ID environment variable.')
   }
 
-  // Get Douban RSS URL from query parameter
-  const { searchParams } = new URL(req.url)
-  const url = searchParams.get('url')
+  // Get Douban RSS URL from environment variable
+  const url = process.env.DOUBAN_RSS_URL
 
-  if (typeof url !== 'string' || !url) {
-    fail('Missing url query parameter')
-    return jsonInvalidParameters('url query parameter is required (e.g., ?url=https://example.com/rss)')
+  if (!url || typeof url !== 'string') {
+    fail('Missing DOUBAN_RSS_URL environment variable')
+    return jsonInvalidParameters('DOUBAN_RSS_URL environment variable is required (e.g., https://www.douban.com/feed/people/148049852/interests)')
   }
 
   info(`Syncing Douban list to TMDB favorites: ${url}`)
