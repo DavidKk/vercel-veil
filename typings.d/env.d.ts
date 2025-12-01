@@ -70,5 +70,8 @@ declare namespace NodeJS {
     /** Cache configuration */
     /** Enable/disable cache (default: "1" for enabled, "0" for disabled) */
     CACHE?: string
+
+    /** Vercel Cron Job secret for authorization (Vercel adds this to Authorization header) */
+    CRON_SECRET?: string
   }
 }

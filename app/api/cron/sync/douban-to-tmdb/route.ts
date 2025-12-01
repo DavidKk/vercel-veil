@@ -18,11 +18,29 @@ export const runtime = 'nodejs'
 
 /**
  * Verify if request is from Vercel Cron Job
- * Vercel cron jobs always have User-Agent: vercel-cron/1.0
+ * Vercel cron jobs always have:
+ * - User-Agent: vercel-cron/1.0
+ * - Authorization: Bearer ${CRON_SECRET}
  */
 function isVercelCronRequest(req: NextRequest): boolean {
   const userAgent = req.headers.get('user-agent')
-  return userAgent === 'vercel-cron/1.0'
+  const authorization = req.headers.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
+
+  // Check User-Agent
+  if (userAgent !== 'vercel-cron/1.0') {
+    return false
+  }
+
+  // If CRON_SECRET is set, verify Authorization header
+  if (cronSecret) {
+    const expectedAuth = `Bearer ${cronSecret}`
+    if (authorization !== expectedAuth) {
+      return false
+    }
+  }
+
+  return true
 }
 
 /**

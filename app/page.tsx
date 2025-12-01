@@ -1,4 +1,4 @@
-import { LogIn } from 'feather-icons-react'
+import { Check, LogIn } from 'feather-icons-react'
 import Link from 'next/link'
 
 import { generate } from '@/components/Meta'
