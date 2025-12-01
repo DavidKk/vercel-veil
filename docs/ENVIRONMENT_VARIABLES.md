@@ -36,6 +36,19 @@
 | `THE_TVDB_LANGUAGE`           | 否   | TheTVDB 查询语言，默认 `zh-CN`               | `zh-CN`      |
 | `PREFERRED_METADATA_LANGUAGE` | 否   | 当两个平台都可用时的首选语言                 | `zh-CN`      |
 
+## 可选：GitHub GIST 存储（电影列表缓存）
+
+| 变量         | 必填 | 描述                                                            | 示例                     |
+| ------------ | ---- | --------------------------------------------------------------- | ------------------------ |
+| `GIST_ID`    | 否   | GitHub GIST ID，用于存储电影列表缓存数据                        | `xxxxxxxxxxxxxxxxxxxx`   |
+| `GIST_TOKEN` | 否   | GitHub Personal Access Token（需要 `gist` 权限），用于访问 GIST | `ghp_xxxxxxxxxxxxxxxxxx` |
+
+**说明**：
+
+- 用于电影列表的 GIST 缓存功能，可以减少 API 请求量
+- 如果未配置，系统会自动降级到原有逻辑（直接请求 API）
+- GIST Token 需要 `gist` 权限，可以在 GitHub Settings > Developer settings > Personal access tokens 中创建
+
 ## 可选：Vercel 项目信息
 
 | 变量                      | 必填 | 描述                                         | 示例                        |

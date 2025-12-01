@@ -117,7 +117,21 @@ export async function writeGistFile(params: WriteGistFileParams) {
   })
 
   if (!response.ok) {
-    throw new Error('Failed to update gist')
+    let errorMessage = `Failed to update gist: HTTP ${response.status} ${response.statusText}`
+    try {
+      const errorBody = await response.text()
+      if (errorBody) {
+        const errorJson = JSON.parse(errorBody)
+        if (errorJson.message) {
+          errorMessage += ` - ${errorJson.message}`
+        } else {
+          errorMessage += ` - ${errorBody.substring(0, 200)}`
+        }
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+    throw new Error(errorMessage)
   }
 
   return response.json()

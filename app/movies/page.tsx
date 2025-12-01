@@ -1,4 +1,4 @@
-import { getFavoriteMovieIds, getMoviesList, isFavoriteFeatureAvailable } from '@/app/actions/movies'
+import { getFavoriteMovieIds, getMoviesListWithGistCache, isFavoriteFeatureAvailable } from '@/app/actions/movies'
 import { checkAccess } from '@/services/auth/access'
 import { isMobileDevice } from '@/utils/device'
 
@@ -14,7 +14,7 @@ export default async function MoviesPage() {
 
   // Fetch data on server side
   const [movies, favoriteAvailable, favoriteIdsArray, initialIsMobile] = await Promise.all([
-    getMoviesList(),
+    getMoviesListWithGistCache(),
     isFavoriteFeatureAvailable(),
     isFavoriteFeatureAvailable().then((available) => (available ? getFavoriteMovieIds() : Promise.resolve([]))),
     isMobileDevice(),

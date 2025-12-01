@@ -33,28 +33,22 @@ export async function getMovieGenres(): Promise<Map<number, string>> {
   const apiKey = getTmdbApiKey()
   const language = process.env.TMDB_LANGUAGE ?? 'zh-CN'
 
-  try {
-    info('Fetching movie genres from TMDB')
-    const apiUrl = `${TMDB.API_BASE_URL}/genre/movie/list?api_key=${apiKey}&language=${language}`
-    const response = await fetch(apiUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    })
+  info('Fetching movie genres from TMDB')
+  const apiUrl = `${TMDB.API_BASE_URL}/genre/movie/list?api_key=${apiKey}&language=${language}`
+  const response = await fetch(apiUrl, {
+    headers: {
+      accept: 'application/json',
+    },
+  })
 
-    if (!response.ok) {
-      fail(`TMDB fetch movie genres failed: status=${response.status} ${response.statusText}`)
-      return new Map()
-    }
-
-    const data = (await response.json()) as TMDBGenresResponse
-    movieGenresCache = new Map(data.genres.map((genre) => [genre.id, genre.name]))
-    info(`Fetched ${movieGenresCache.size} movie genres from TMDB`)
-    return movieGenresCache
-  } catch (error) {
-    fail('TMDB fetch movie genres error:', error)
-    return new Map()
+  if (!response.ok) {
+    throw new Error(`TMDB fetch movie genres failed: status=${response.status} ${response.statusText}`)
   }
+
+  const data = (await response.json()) as TMDBGenresResponse
+  movieGenresCache = new Map(data.genres.map((genre) => [genre.id, genre.name]))
+  info(`Fetched ${movieGenresCache.size} movie genres from TMDB`)
+  return movieGenresCache
 }
 
 /**
@@ -126,54 +120,47 @@ export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Prom
   const language = options.language ?? process.env.TMDB_LANGUAGE ?? 'zh-CN'
   const page = options.page ?? 1
 
-  try {
-    // Calculate date range: 2 weeks ago to today
-    const today = new Date()
-    const twoWeeksAgo = new Date()
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+  // Calculate date range: 2 weeks ago to today
+  const today = new Date()
+  const twoWeeksAgo = new Date()
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
 
-    const dateGte = twoWeeksAgo.toISOString().split('T')[0] // YYYY-MM-DD
-    const dateLte = today.toISOString().split('T')[0] // YYYY-MM-DD
+  const dateGte = twoWeeksAgo.toISOString().split('T')[0] // YYYY-MM-DD
+  const dateLte = today.toISOString().split('T')[0] // YYYY-MM-DD
 
-    info(`Fetching popular movies from TMDB (page=${page}, date range: ${dateGte} to ${dateLte}, rating >= 7.0)`)
+  info(`Fetching popular movies from TMDB (page=${page}, date range: ${dateGte} to ${dateLte}, rating >= 7.0)`)
 
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      language,
-      page: String(page),
-      sort_by: 'popularity.desc',
-      'primary_release_date.gte': dateGte,
-      'primary_release_date.lte': dateLte,
-      'vote_average.gte': '7.0',
-    })
+  const params = new URLSearchParams({
+    api_key: apiKey,
+    language,
+    page: String(page),
+    sort_by: 'popularity.desc',
+    'primary_release_date.gte': dateGte,
+    'primary_release_date.lte': dateLte,
+    'vote_average.gte': '7.0',
+  })
 
-    if (options.region) {
-      params.set('region', options.region)
-    }
-
-    const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
-    const response = await fetch(apiUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      fail(`TMDB fetch popular movies failed: status=${response.status} ${response.statusText}`)
-      return []
-    }
-
-    const data = (await response.json()) as TMDBMoviesResponse
-    if (!data || !data.results) {
-      warn(`TMDB fetch popular movies: invalid response structure`, data)
-      return []
-    }
-    info(`Fetched ${data.results.length} popular movies from TMDB`)
-    return data.results
-  } catch (error) {
-    fail('TMDB fetch popular movies error:', error)
-    return []
+  if (options.region) {
+    params.set('region', options.region)
   }
+
+  const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
+  const response = await fetch(apiUrl, {
+    headers: {
+      accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`TMDB fetch popular movies failed: status=${response.status} ${response.statusText}`)
+  }
+
+  const data = (await response.json()) as TMDBMoviesResponse
+  if (!data || !data.results) {
+    throw new Error(`TMDB fetch popular movies: invalid response structure`)
+  }
+  info(`Fetched ${data.results.length} popular movies from TMDB`)
+  return data.results
 }
 
 /**
@@ -185,53 +172,46 @@ export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Pro
   const language = options.language ?? process.env.TMDB_LANGUAGE ?? 'zh-CN'
   const page = options.page ?? 1
 
-  try {
-    // Calculate date range: today to 1 month from now
-    const today = new Date()
-    const oneMonthLater = new Date()
-    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
+  // Calculate date range: today to 1 month from now
+  const today = new Date()
+  const oneMonthLater = new Date()
+  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
 
-    const dateGte = today.toISOString().split('T')[0] // YYYY-MM-DD
-    const dateLte = oneMonthLater.toISOString().split('T')[0] // YYYY-MM-DD
+  const dateGte = today.toISOString().split('T')[0] // YYYY-MM-DD
+  const dateLte = oneMonthLater.toISOString().split('T')[0] // YYYY-MM-DD
 
-    info(`Fetching upcoming movies from TMDB (page=${page}, date range: ${dateGte} to ${dateLte})`)
+  info(`Fetching upcoming movies from TMDB (page=${page}, date range: ${dateGte} to ${dateLte})`)
 
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      language,
-      page: String(page),
-      sort_by: 'popularity.desc',
-      'primary_release_date.gte': dateGte,
-      'primary_release_date.lte': dateLte,
-    })
+  const params = new URLSearchParams({
+    api_key: apiKey,
+    language,
+    page: String(page),
+    sort_by: 'popularity.desc',
+    'primary_release_date.gte': dateGte,
+    'primary_release_date.lte': dateLte,
+  })
 
-    if (options.region) {
-      params.set('region', options.region)
-    }
-
-    const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
-    const response = await fetch(apiUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      fail(`TMDB fetch upcoming movies failed: status=${response.status} ${response.statusText}`)
-      return []
-    }
-
-    const data = (await response.json()) as TMDBMoviesResponse
-    if (!data || !data.results) {
-      warn(`TMDB fetch upcoming movies: invalid response structure`, data)
-      return []
-    }
-    info(`Fetched ${data.results.length} upcoming movies from TMDB`)
-    return data.results
-  } catch (error) {
-    fail('TMDB fetch upcoming movies error:', error)
-    return []
+  if (options.region) {
+    params.set('region', options.region)
   }
+
+  const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
+  const response = await fetch(apiUrl, {
+    headers: {
+      accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`TMDB fetch upcoming movies failed: status=${response.status} ${response.statusText}`)
+  }
+
+  const data = (await response.json()) as TMDBMoviesResponse
+  if (!data || !data.results) {
+    throw new Error(`TMDB fetch upcoming movies: invalid response structure`)
+  }
+  info(`Fetched ${data.results.length} upcoming movies from TMDB`)
+  return data.results
 }
 
 /**
@@ -242,47 +222,41 @@ export async function discoverMovies(options: FetchMoviesOptions = {}): Promise<
   const language = options.language ?? process.env.TMDB_LANGUAGE ?? 'zh-CN'
   const page = options.page ?? 1
 
-  try {
-    info(`Discovering movies from TMDB (page=${page})`)
+  info(`Discovering movies from TMDB (page=${page})`)
 
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      language,
-      page: String(page),
-      sort_by: 'popularity.desc',
-    })
+  const params = new URLSearchParams({
+    api_key: apiKey,
+    language,
+    page: String(page),
+    sort_by: 'popularity.desc',
+  })
 
-    if (options.region) {
-      params.set('region', options.region)
-    }
-
-    if (options.primary_release_date_gte) {
-      params.set('primary_release_date.gte', options.primary_release_date_gte)
-    }
-
-    if (options.primary_release_date_lte) {
-      params.set('primary_release_date.lte', options.primary_release_date_lte)
-    }
-
-    const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
-    const response = await fetch(apiUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      fail(`TMDB discover movies failed: status=${response.status} ${response.statusText}`)
-      return []
-    }
-
-    const data = (await response.json()) as TMDBMoviesResponse
-    info(`Discovered ${data.results.length} movies from TMDB`)
-    return data.results
-  } catch (error) {
-    fail('TMDB discover movies error:', error)
-    return []
+  if (options.region) {
+    params.set('region', options.region)
   }
+
+  if (options.primary_release_date_gte) {
+    params.set('primary_release_date.gte', options.primary_release_date_gte)
+  }
+
+  if (options.primary_release_date_lte) {
+    params.set('primary_release_date.lte', options.primary_release_date_lte)
+  }
+
+  const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
+  const response = await fetch(apiUrl, {
+    headers: {
+      accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`TMDB discover movies failed: status=${response.status} ${response.statusText}`)
+  }
+
+  const data = (await response.json()) as TMDBMoviesResponse
+  info(`Discovered ${data.results.length} movies from TMDB`)
+  return data.results
 }
 
 /**
@@ -392,7 +366,6 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
 
   try {
     const apiUrl = `${TMDB.API_BASE_URL}/account?api_key=${apiKey}&session_id=${sessionId}`
-    info(`Fetching TMDB account info with session_id: ${sessionId.substring(0, 8)}...`)
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -402,7 +375,9 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
 
     if (!response.ok) {
       const errorText = await response.text()
-      fail(`TMDB get account info failed: status=${response.status} ${response.statusText}, body=${errorText}`)
+      // Limit error body length to avoid logging sensitive information
+      const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
+      fail(`TMDB get account info failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
 
       // Provide more detailed error information
       if (response.status === 401) {
@@ -415,7 +390,7 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
     }
 
     const data = (await response.json()) as { id: number; username?: string }
-    info(`Successfully fetched TMDB account info: accountId=${data.id}, username=${data.username || 'N/A'}`)
+    info('Successfully fetched TMDB account info')
     return { accountId: data.id }
   } catch (error) {
     if (error instanceof Error && error.message.includes('Session ID')) {
@@ -456,7 +431,6 @@ export async function getFavoriteMovies(): Promise<Set<number>> {
 
   try {
     const apiUrl = `${TMDB.API_BASE_URL}/account/${accountInfo.accountId}/favorite/movies?api_key=${apiKey}&session_id=${sessionId}`
-    info(`Fetching TMDB favorite movies for account ${accountInfo.accountId}`)
 
     const favoriteIds = new Set<number>()
     let page = 1
@@ -471,7 +445,9 @@ export async function getFavoriteMovies(): Promise<Set<number>> {
 
       if (!response.ok) {
         const errorText = await response.text()
-        fail(`TMDB get favorite movies failed: status=${response.status} ${response.statusText}, body=${errorText}`)
+        // Limit error body length to avoid logging sensitive information
+        const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
+        fail(`TMDB get favorite movies failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
         break
       }
 
@@ -534,8 +510,6 @@ export async function addToFavorites(movieId: number, favorite = true): Promise<
   }
 
   try {
-    info(`Adding movie ${movieId} to favorites: ${favorite}`)
-
     const apiUrl = `${TMDB.API_BASE_URL}/account/${accountInfo.accountId}/favorite?api_key=${apiKey}&session_id=${sessionId}`
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -552,19 +526,20 @@ export async function addToFavorites(movieId: number, favorite = true): Promise<
 
     if (!response.ok) {
       const errorText = await response.text()
-      fail(`TMDB add to favorites failed: status=${response.status} ${response.statusText}, body=${errorText}`)
+      // Limit error body length to avoid logging sensitive information
+      const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
+      fail(`TMDB add to favorites failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
       throw new Error(`Failed to ${favorite ? 'add' : 'remove'} movie from favorites: ${response.statusText}`)
     }
 
     const data = (await response.json()) as { status_code: number; status_message: string }
     if (data.status_code === 1 || data.status_code === 12 || data.status_code === 13) {
-      info(`Successfully ${favorite ? 'added' : 'removed'} movie ${movieId} to/from favorites`)
       return true
     }
 
     throw new Error(data.status_message || 'Unknown error')
   } catch (error) {
-    fail(`TMDB add to favorites error for movie ${movieId}:`, error)
+    fail('TMDB add to favorites error:', error)
     throw error
   }
 }

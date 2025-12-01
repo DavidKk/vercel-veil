@@ -8,47 +8,83 @@ import { MAOYAN, MAOYAN_CACHE } from './constants'
 import type { ComingMovie, MergedMovie, MostExpectedResponse, MovieListItem, TopRatedMoviesResponse } from './types'
 
 /**
+ * Fetch top rated movies list (without cache)
+ * Internal use for GIST cache system
+ * @throws Error if fetch fails
+ */
+async function fetchTopRatedMoviesWithoutCache(): Promise<MovieListItem[]> {
+  info('Fetching top rated movies from Maoyan (no cache)')
+  const response = await fetch(`${MAOYAN.API_BASE}/index/topRatedMovies`, {
+    headers: {
+      'User-Agent': MAOYAN.USER_AGENT,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`)
+  }
+
+  const data = (await response.json()) as TopRatedMoviesResponse
+  info(`Fetched ${data.movieList?.length || 0} top rated movies (no cache)`)
+  return data.movieList || []
+}
+
+/**
  * Fetch top rated movies list
  * Results are cached according to MAOYAN_CACHE.TOP_RATED_MOVIES to reduce API requests
+ * @throws Error if fetch fails
  */
 export async function fetchTopRatedMovies(): Promise<MovieListItem[]> {
-  try {
-    info('Fetching top rated movies from Maoyan')
-    const data = await fetchJsonWithCache<TopRatedMoviesResponse>(`${MAOYAN.API_BASE}/index/topRatedMovies`, {
-      headers: {
-        'User-Agent': MAOYAN.USER_AGENT,
-      },
-      cacheDuration: MAOYAN_CACHE.TOP_RATED_MOVIES,
-    })
+  info('Fetching top rated movies from Maoyan')
+  const data = await fetchJsonWithCache<TopRatedMoviesResponse>(`${MAOYAN.API_BASE}/index/topRatedMovies`, {
+    headers: {
+      'User-Agent': MAOYAN.USER_AGENT,
+    },
+    cacheDuration: MAOYAN_CACHE.TOP_RATED_MOVIES,
+  })
 
-    info(`Fetched ${data.movieList?.length || 0} top rated movies`)
-    return data.movieList || []
-  } catch (error) {
-    fail('Error fetching top rated movies:', error)
-    return []
+  info(`Fetched ${data.movieList?.length || 0} top rated movies`)
+  return data.movieList || []
+}
+
+/**
+ * Fetch most expected movies list (without cache)
+ * Internal use for GIST cache system
+ * @throws Error if fetch fails
+ */
+async function fetchMostExpectedWithoutCache(limit = 20, offset = 0): Promise<ComingMovie[]> {
+  info(`Fetching most expected movies from Maoyan (no cache, limit=${limit}, offset=${offset})`)
+  const response = await fetch(`${MAOYAN.API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
+    headers: {
+      'User-Agent': MAOYAN.USER_AGENT,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`)
   }
+
+  const data = (await response.json()) as MostExpectedResponse
+  info(`Fetched ${data.coming?.length || 0} most expected movies (no cache)`)
+  return data.coming || []
 }
 
 /**
  * Fetch most expected movies list
  * Results are cached according to MAOYAN_CACHE.MOST_EXPECTED to reduce API requests
+ * @throws Error if fetch fails
  */
 export async function fetchMostExpected(limit = 20, offset = 0): Promise<ComingMovie[]> {
-  try {
-    info(`Fetching most expected movies from Maoyan (limit=${limit}, offset=${offset})`)
-    const data = await fetchJsonWithCache<MostExpectedResponse>(`${MAOYAN.API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
-      headers: {
-        'User-Agent': MAOYAN.USER_AGENT,
-      },
-      cacheDuration: MAOYAN_CACHE.MOST_EXPECTED,
-    })
+  info(`Fetching most expected movies from Maoyan (limit=${limit}, offset=${offset})`)
+  const data = await fetchJsonWithCache<MostExpectedResponse>(`${MAOYAN.API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
+    headers: {
+      'User-Agent': MAOYAN.USER_AGENT,
+    },
+    cacheDuration: MAOYAN_CACHE.MOST_EXPECTED,
+  })
 
-    info(`Fetched ${data.coming?.length || 0} most expected movies`)
-    return data.coming || []
-  } catch (error) {
-    fail('Error fetching most expected movies:', error)
-    return []
-  }
+  info(`Fetched ${data.coming?.length || 0} most expected movies`)
+  return data.coming || []
 }
 
 /**
@@ -440,13 +476,188 @@ export interface GetMergedMoviesListOptions {
   includeTMDBUpcoming?: boolean
 }
 
+/**
+ * Get merged movie list without request-level cache
+ * Internal use for GIST cache system
+ */
+export async function getMergedMoviesListWithoutCache(options: GetMergedMoviesListOptions = {}): Promise<MergedMovie[]> {
+  info('Fetching and merging movie lists from Maoyan and TMDB (no request cache)')
+
+  const { includeTMDBPopular = true, includeTMDBUpcoming = true } = options
+
+  // Fetch Maoyan lists without cache (use allSettled for graceful error handling)
+  const maoyanResults = await Promise.allSettled([fetchTopRatedMoviesWithoutCache(), fetchMostExpectedWithoutCache(20, 0)])
+
+  const topRated = maoyanResults[0]?.status === 'fulfilled' ? maoyanResults[0].value : []
+  const mostExpected = maoyanResults[1]?.status === 'fulfilled' ? maoyanResults[1].value : []
+
+  if (maoyanResults[0]?.status === 'rejected') {
+    fail('Failed to fetch top rated movies from Maoyan:', maoyanResults[0].reason)
+  }
+  if (maoyanResults[1]?.status === 'rejected') {
+    fail('Failed to fetch most expected movies from Maoyan:', maoyanResults[1].reason)
+  }
+
+  // Merge Maoyan movies
+  const movieMap = new Map<string, MergedMovie>()
+
+  // Process top rated movies
+  for (const movie of topRated) {
+    const key = movie.name.toLowerCase().trim()
+    movieMap.set(key, {
+      maoyanId: movie.movieId,
+      name: movie.name,
+      poster: movie.poster,
+      score: movie.score,
+      source: 'topRated',
+      sources: ['topRated'],
+      maoyanUrl: getMaoyanUrl(movie.movieId),
+    })
+  }
+
+  // Process most expected movies
+  for (const movie of mostExpected) {
+    const key = movie.nm.toLowerCase().trim()
+    const existing = movieMap.get(key)
+
+    if (existing) {
+      if (!existing.sources.includes('mostExpected')) {
+        existing.sources.push('mostExpected')
+      }
+      if (!existing.wish && movie.wish) {
+        existing.wish = movie.wish
+      }
+      // Ensure maoyanUrl is set if not already present
+      if (!existing.maoyanUrl) {
+        existing.maoyanUrl = getMaoyanUrl(movie.id)
+      }
+    } else {
+      movieMap.set(key, {
+        maoyanId: movie.id,
+        name: movie.nm,
+        poster: movie.img,
+        wish: movie.wish,
+        source: 'mostExpected',
+        sources: ['mostExpected'],
+        maoyanUrl: getMaoyanUrl(movie.id),
+      })
+    }
+  }
+
+  info(`Merged ${movieMap.size} unique movies from Maoyan (${topRated.length} top rated + ${mostExpected.length} most expected)`)
+
+  // Fetch TMDB movies if API key is available
+  if (hasTmdbApiKey()) {
+    const tmdbPromises: Promise<TMDBMovie[]>[] = []
+
+    if (includeTMDBPopular) {
+      tmdbPromises.push(fetchPopularMovies({ language: 'zh-CN', page: 1 }))
+    }
+
+    // Fetch upcoming movies
+    if (includeTMDBUpcoming) {
+      // TMDB's upcoming movies API returns movies scheduled to be released in the next month (30 days)
+      tmdbPromises.push(fetchUpcomingMovies({ language: 'zh-CN', page: 1 }))
+    }
+
+    // Build a map of TMDB movies by title for efficient lookup
+    const tmdbTitleMap = new Map<string, TMDBMovie>()
+
+    if (tmdbPromises.length > 0) {
+      info('Fetching TMDB movie lists')
+      const tmdbResults = await Promise.allSettled(tmdbPromises)
+
+      let tmdbIndex = 0
+      if (includeTMDBPopular) {
+        const result = tmdbResults[tmdbIndex]
+        if (result?.status === 'fulfilled') {
+          const movies = result.value
+          if (movies && movies.length > 0) {
+            await mergeTMDBMovies(movieMap, movies, 'tmdbPopular')
+            // Add to title map for efficient lookup during enrichment
+            for (const movie of movies) {
+              const key = movie.title.toLowerCase().trim()
+              if (!tmdbTitleMap.has(key)) {
+                tmdbTitleMap.set(key, movie)
+              }
+            }
+            info(`Merged ${movies.length} popular movies from TMDB`)
+          } else {
+            warn('TMDB popular movies returned empty array')
+          }
+        } else if (result?.status === 'rejected') {
+          fail('TMDB popular movies request failed:', result.reason)
+        }
+        tmdbIndex++
+      }
+
+      if (includeTMDBUpcoming) {
+        // Merge upcoming movies
+        const upcomingResult = tmdbResults[tmdbIndex]
+        if (upcomingResult?.status === 'fulfilled') {
+          const movies = upcomingResult.value
+          if (movies && movies.length > 0) {
+            await mergeTMDBMovies(movieMap, movies, 'tmdbUpcoming')
+            // Add to title map for efficient lookup during enrichment
+            for (const movie of movies) {
+              const key = movie.title.toLowerCase().trim()
+              if (!tmdbTitleMap.has(key)) {
+                tmdbTitleMap.set(key, movie)
+              }
+            }
+            info(`Merged ${movies.length} upcoming movies from TMDB`)
+          } else {
+            warn('TMDB upcoming movies returned empty array')
+          }
+        } else if (upcomingResult?.status === 'rejected') {
+          fail('TMDB upcoming movies request failed:', upcomingResult.reason)
+        }
+      }
+    }
+
+    // Enrich remaining movies with TMDB search (for movies that don't have TMDB data yet)
+    const moviesToEnrich = Array.from(movieMap.values()).filter((m) => !m.tmdbId)
+    if (moviesToEnrich.length > 0) {
+      // Use batch enrichment with pre-fetched TMDB data to avoid unnecessary searches
+      const enriched = await batchEnrichMoviesWithTMDB(moviesToEnrich, tmdbTitleMap)
+
+      for (let i = 0; i < enriched.length; i++) {
+        const key = moviesToEnrich[i].name.toLowerCase().trim()
+        movieMap.set(key, enriched[i])
+      }
+    }
+  }
+
+  // Return all merged movies (no filtering by wish data)
+  const finalMovies = Array.from(movieMap.values())
+  info(`Final merged list (no cache): ${finalMovies.length} unique movies`)
+  return finalMovies
+}
+
+/**
+ * Get and merge movie lists, enrich with TMDB information
+ * @param options Options for fetching TMDB movies
+ *   - includeTMDBPopular: Include popular movies from TMDB (default: true)
+ *   - includeTMDBUpcoming: Include upcoming movies from TMDB, merged with now playing movies (default: true)
+ *     Now playing movies with rating >= 7.0 will be included in upcoming list
+ */
 export async function getMergedMoviesList(options: GetMergedMoviesListOptions = {}): Promise<MergedMovie[]> {
   info('Fetching and merging movie lists from Maoyan and TMDB')
 
   const { includeTMDBPopular = true, includeTMDBUpcoming = true } = options
 
-  // Fetch Maoyan lists
-  const [topRated, mostExpected] = await Promise.all([fetchTopRatedMovies(), fetchMostExpected(20, 0)])
+  // Fetch Maoyan lists (use allSettled for graceful error handling)
+  const maoyanResults = await Promise.allSettled([fetchTopRatedMovies(), fetchMostExpected(20, 0)])
+
+  const topRated = maoyanResults[0]?.status === 'fulfilled' ? maoyanResults[0].value : []
+  const mostExpected = maoyanResults[1]?.status === 'fulfilled' ? maoyanResults[1].value : []
+
+  if (maoyanResults[0]?.status === 'rejected') {
+    fail('Failed to fetch top rated movies from Maoyan:', maoyanResults[0].reason)
+  }
+  if (maoyanResults[1]?.status === 'rejected') {
+    fail('Failed to fetch most expected movies from Maoyan:', maoyanResults[1].reason)
+  }
 
   // Merge Maoyan movies
   const movieMap = new Map<string, MergedMovie>()

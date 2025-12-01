@@ -61,4 +61,8 @@ export interface MergedMovie {
   rating?: number
   tmdbUrl?: string
   genres?: string[] // Movie genres (e.g., Action, Comedy, Drama, etc.)
+
+  // Cache metadata (only exists when loaded from GIST or processed)
+  insertedAt?: number // First insertion timestamp (UTC), set when movie is new, preserved when movie exists
+  updatedAt?: number // Last update timestamp (UTC), updated on each data refresh
 }
