@@ -1,7 +1,7 @@
 import { cron } from '@/initializer/controller'
 import { standardResponseSuccess } from '@/initializer/response'
 import { info } from '@/services/logger'
-import { updateMoviesGist } from '@/services/movies'
+import { getMoviesListWithAutoUpdate } from '@/services/movies'
 
 export const runtime = 'nodejs'
 
@@ -13,9 +13,9 @@ export const runtime = 'nodejs'
 export const GET = cron(async () => {
   info('Movies GIST sync handler started')
 
-  const { movies, cacheData } = await updateMoviesGist()
+  const movies = await getMoviesListWithAutoUpdate()
 
-  info(`Movies GIST sync completed: ${movies.length} movies, ${cacheData.current.metadata.totalCount} total`)
+  info(`Movies GIST sync completed: ${movies.length} movies`)
 
   return standardResponseSuccess()
 })

@@ -3,7 +3,7 @@ import type { GetMergedMoviesListOptions } from '@/services/maoyan'
 import { getMergedMoviesListWithoutCache } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
 
-import { createInitialCacheData, getMoviesFromGist, saveMoviesToGist, setResultToCache, updateCacheData } from './cache'
+import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from './cache'
 import type { MoviesCacheData } from './types'
 
 // Re-export types
@@ -76,6 +76,75 @@ export function getNewMoviesFromCache(cacheData: MoviesCacheData | null): Merged
 
   // Get new movies by comparing current and previous
   return getNewMovies(cacheData.current.movies, cacheData.previous.movies)
+}
+
+/**
+ * Get movies list with automatic GIST cache management
+ * This function handles both reading and writing to GIST automatically
+ * - Checks in-memory cache first
+ * - Reads from GIST if available
+ * - Updates GIST if cache is stale or missing
+ * - Returns cached or fresh data
+ * This function can be called by both pages and cron jobs
+ * @param options Options for fetching movies
+ * @returns Movies list
+ */
+export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOptions = {}): Promise<MergedMovie[]> {
+  // Check in-memory cache first
+  const cachedResult = getResultFromCache()
+  if (cachedResult) {
+    info('getMoviesListWithAutoUpdate - In-memory cache hit')
+    return cachedResult
+  }
+
+  // Read from GIST
+  let cacheData: MoviesCacheData | null = null
+  try {
+    cacheData = await getMoviesFromGist()
+  } catch (error) {
+    // GIST read failure - will update GIST below
+    info('getMoviesListWithAutoUpdate - GIST read failed, will create new cache:', error)
+  }
+
+  // Check if update is needed
+  const needsUpdate = !cacheData || (cacheData.current.timestamp && shouldUpdate(cacheData.current.timestamp))
+
+  if (cacheData && !needsUpdate) {
+    // Use cached data (still fresh)
+    const movies = cacheData.current.movies
+    setResultToCache(movies)
+    info('getMoviesListWithAutoUpdate - GIST cache hit (fresh)')
+    return movies
+  }
+
+  // Need to update: fetch new data and save to GIST
+  info('getMoviesListWithAutoUpdate - Updating GIST cache')
+  const newMovies = await getMergedMoviesListWithoutCache(options)
+
+  // Create or update cache data
+  if (!cacheData) {
+    // First time: create initial cache
+    cacheData = createInitialCacheData(newMovies)
+    info('getMoviesListWithAutoUpdate - Created initial cache data')
+  } else {
+    // Update existing cache
+    cacheData = updateCacheData(cacheData.current, newMovies)
+    info('getMoviesListWithAutoUpdate - Updated existing cache data')
+  }
+
+  // Save to GIST (non-blocking - log errors but don't throw)
+  try {
+    await saveMoviesToGist(cacheData)
+    info('getMoviesListWithAutoUpdate - Successfully saved to GIST')
+  } catch (error) {
+    // Log error but don't throw - return data anyway
+    fail('getMoviesListWithAutoUpdate - Failed to save to GIST (non-blocking):', error)
+  }
+
+  // Update in-memory cache
+  setResultToCache(cacheData.current.movies)
+
+  return cacheData.current.movies
 }
 
 /**

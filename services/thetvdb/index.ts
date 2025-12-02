@@ -40,9 +40,14 @@ export async function searchByTitle(title: string, options: SearchOptions = {}):
     }
 
     const json = (await response.json()) as SearchResponse
-    if (json.status !== 'success' || !(Array.isArray(json.data) && json.data.length > 0)) {
-      fail(`TVDB response invalid for "${title}"`, json)
-      return []
+    if (json.status !== 'success') {
+      // Log but don't fail - TheTVDB may return non-success status for valid queries
+      info(`TVDB response status not success for "${title}": ${json.status}`)
+      return null
+    }
+    if (!Array.isArray(json.data) || json.data.length === 0) {
+      // No results found - this is normal, not an error
+      return null
     }
 
     info(`TVDB search success: ${title}, results=${json.data.length}`)

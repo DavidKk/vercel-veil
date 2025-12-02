@@ -77,5 +77,10 @@ declare namespace NodeJS {
 
     /** Douban RSS URL for syncing movie list to TMDB favorites */
     DOUBAN_RSS_URL?: string
+
+    /** AniList Access Token (optional, for better rate limits) */
+    /** Get from: https://anilist.co/settings/developer */
+    /** Note: AniList GraphQL API is public, but using access token improves rate limits */
+    ANILIST_ACCESS_TOKEN?: string
   }
 }

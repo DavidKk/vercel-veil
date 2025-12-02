@@ -2,35 +2,35 @@
 
 import { useEffect } from 'react'
 
-interface MovieSwipeBackgroundProps {
-  currentPosterUrl: string | null
-  nextPosterUrl: string | null
+interface SwipeBackgroundProps {
+  currentImageUrl: string | null
+  nextImageUrl: string | null
   scrollProgress: number // 0-1, 0 = current, 1 = next
 }
 
-export default function MovieSwipeBackground({ currentPosterUrl, nextPosterUrl, scrollProgress }: MovieSwipeBackgroundProps) {
+export default function SwipeBackground({ currentImageUrl, nextImageUrl, scrollProgress }: SwipeBackgroundProps) {
   // Default placeholder image
   const placeholderImage =
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"%3E%3Crect fill="%231f2937" width="200" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="16"%3ENo Image%3C/text%3E%3C/svg%3E'
 
   // Use placeholder if URL is empty
-  const currentSrc = currentPosterUrl || placeholderImage
-  const nextSrc = nextPosterUrl || null
+  const currentSrc = currentImageUrl || placeholderImage
+  const nextSrc = nextImageUrl || null
 
   // Preload images for smooth transition
   useEffect(() => {
-    if (currentPosterUrl) {
+    if (currentImageUrl) {
       const img = new Image()
-      img.src = currentPosterUrl
+      img.src = currentImageUrl
     }
-  }, [currentPosterUrl])
+  }, [currentImageUrl])
 
   useEffect(() => {
-    if (nextPosterUrl) {
+    if (nextImageUrl) {
       const img = new Image()
-      img.src = nextPosterUrl
+      img.src = nextImageUrl
     }
-  }, [nextPosterUrl])
+  }, [nextImageUrl])
 
   const currentOpacity = 1 - scrollProgress
   const nextOpacity = scrollProgress

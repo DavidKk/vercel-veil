@@ -178,7 +178,11 @@ async function getSeriesMetadata(
           coverImage = seriesResult.image_url
         }
 
-        if (seriesResult.overview) {
+        // Try to get Chinese overview first, then fallback to default overview
+        if (seriesResult.overviews) {
+          synopsis =
+            seriesResult.overviews['zh-CN'] || seriesResult.overviews['zh'] || seriesResult.overviews['zh-Hans'] || seriesResult.overviews['zh-Hant'] || seriesResult.overview
+        } else if (seriesResult.overview) {
           synopsis = seriesResult.overview
         }
 

@@ -7,10 +7,9 @@ import { favoriteMovie } from '@/app/actions/movies'
 import { favoriteMovieWithToken } from '@/app/actions/movies/share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
+import LazyImage from '@/components/LazyImage'
 import Tooltip from '@/components/Tooltip'
 import type { MergedMovie } from '@/services/maoyan/types'
-
-import LazyImage from './components/LazyImage'
 
 interface MovieSwipeCardProps {
   movie: MergedMovie
@@ -49,13 +48,7 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
             className="relative aspect-[2/3] w-full max-w-[220px] sm:max-w-[260px] md:max-w-[300px] mx-auto overflow-hidden rounded-xl bg-gray-800 shadow-2xl flex-shrink-0 max-h-[55vh]"
             style={{ display: isDetailsExpanded ? 'none' : 'block' }}
           >
-            <LazyImage src={posterUrl} alt={movie.name} className="h-full w-full object-cover" loading="eager" forceLoad={true} />
-            {/* Source badge on poster */}
-            {movie.sources.length > 1 && (
-              <div className="absolute top-2 right-2">
-                <div className="rounded-full bg-indigo-600/90 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">{movie.sources.length} Sources</div>
-              </div>
-            )}
+            <LazyImage src={posterUrl} alt={movie.name} className="h-full w-full object-cover" loading="lazy" />
           </div>
 
           {/* Middle section - Movie info */}

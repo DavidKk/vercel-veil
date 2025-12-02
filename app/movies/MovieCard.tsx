@@ -7,10 +7,9 @@ import { favoriteMovie } from '@/app/actions/movies/index'
 import { favoriteMovieWithToken } from '@/app/actions/movies/share'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
+import LazyImage from '@/components/LazyImage'
 import Tooltip from '@/components/Tooltip'
 import type { MergedMovie } from '@/services/maoyan/types'
-
-import LazyImage from './components/LazyImage'
 
 interface MovieCardProps {
   movie: MergedMovie
@@ -46,39 +45,45 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
 
   const sourceBadgeText = getSourceBadgeText()
 
+  // Check if movie is released and format release date
+  const releaseInfo = (() => {
+    if (!movie.releaseDate) return null
+    const releaseDate = new Date(movie.releaseDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const isReleased = releaseDate <= today
+
+    // Format release date as YYYY/MM/DD
+    const year = releaseDate.getFullYear()
+    const month = String(releaseDate.getMonth() + 1).padStart(2, '0')
+    const day = String(releaseDate.getDate()).padStart(2, '0')
+    const formattedDate = `${year}/${month}/${day}`
+
+    return {
+      isReleased,
+      formattedDate,
+    }
+  })()
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-gray-200 transition-all hover:shadow-xl hover:ring-indigo-500">
       {/* Poster Image */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-gray-100">
-        <LazyImage
-          src={posterUrl}
-          alt={movie.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-          preloadDistance={1}
-          onError={(e) => {
-            // Use placeholder if image fails to load
-            const target = e.target as HTMLImageElement
-            target.src =
-              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"%3E%3Crect fill="%23e5e7eb" width="200" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="16"%3ENo Image%3C/text%3E%3C/svg%3E'
-          }}
-        />
-        {/* Source Badge */}
-        {sourceBadgeText && <div className="absolute right-2 top-2 rounded-full bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-lg">{sourceBadgeText}</div>}
-        {/* Wish Overlay */}
-        {(() => {
-          const wishCount = movie.wish || 0
-          const tmdbCount = movie.tmdbVoteCount || 0
-          const displayCount = Math.max(wishCount, tmdbCount)
-          return displayCount > 0 ? (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
-              <div className="flex items-center gap-1 text-white">
-                <Heart size={16} className="fill-pink-400 text-pink-400" />
-                <span className="text-xs">{displayCount.toLocaleString()}</span>
-              </div>
+        <LazyImage src={posterUrl} alt={movie.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+        {/* Release Status Badge */}
+        {releaseInfo && (
+          <Tooltip content={releaseInfo.formattedDate} position="top">
+            <div
+              className={`absolute left-2 top-2 rounded-full px-2 py-1 text-xs font-semibold text-white shadow-lg cursor-pointer ${releaseInfo.isReleased ? 'bg-green-600' : 'bg-orange-600'}`}
+            >
+              {releaseInfo.isReleased ? 'NOW' : 'SOON'}
             </div>
-          ) : null
-        })()}
+          </Tooltip>
+        )}
+        {/* Source Badge */}
+        {sourceBadgeText && (
+          <div className="absolute right-2 top-2 rounded-full bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-lg cursor-pointer">{sourceBadgeText}</div>
+        )}
       </div>
 
       {/* Movie Information */}

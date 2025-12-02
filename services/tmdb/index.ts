@@ -304,6 +304,51 @@ export async function getMovieDetails(movieId: number, preferredLanguage = 'zh-C
   }
 }
 
+/**
+ * Get TV series details with fallback language for overview
+ * Results are cached according to TMDB_CACHE.MOVIE_DETAILS to reduce API requests
+ */
+export async function getTVDetails(tvId: number, preferredLanguage = 'zh-CN'): Promise<{ overview?: string; name?: string; [key: string]: any } | null> {
+  const apiKey = getTmdbApiKey()
+
+  try {
+    // First try with preferred language (cached)
+    const apiUrl = `${TMDB.API_BASE_URL}/tv/${tvId}?api_key=${apiKey}&language=${preferredLanguage}`
+    let data = await fetchJsonWithCache<{ overview?: string; name?: string; [key: string]: any }>(apiUrl, {
+      headers: {
+        accept: 'application/json',
+      },
+      cacheDuration: TMDB_CACHE.MOVIE_DETAILS,
+    })
+
+    if (!data) {
+      fail(`TMDB get TV details failed for TV ${tvId}`)
+      return null
+    }
+
+    // If overview is empty and preferred language is not English, try English (cached)
+    if ((!data.overview || data.overview.trim() === '') && preferredLanguage !== 'en-US' && preferredLanguage !== 'en') {
+      info(`TV ${tvId} has no overview in ${preferredLanguage}, trying English`)
+      const enApiUrl = `${TMDB.API_BASE_URL}/tv/${tvId}?api_key=${apiKey}&language=en-US`
+      const enData = await fetchJsonWithCache<{ overview?: string; name?: string; [key: string]: any }>(enApiUrl, {
+        headers: {
+          accept: 'application/json',
+        },
+        cacheDuration: TMDB_CACHE.MOVIE_DETAILS,
+      })
+
+      if (enData?.overview && enData.overview.trim() !== '') {
+        data.overview = enData.overview
+      }
+    }
+
+    return data
+  } catch (error) {
+    fail(`TMDB get TV details error for TV ${tvId}:`, error)
+    return null
+  }
+}
+
 export async function searchMulti(title: string, options: SearchOptions = {}): Promise<SearchResult[] | null> {
   const apiKey = getTmdbApiKey()
 
@@ -402,6 +447,78 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
 }
 
 /**
+ * Get user's favorite TV series list
+ * @returns Set of favorite TV IDs
+ */
+export async function getFavoriteTVs(): Promise<Set<number>> {
+  const apiKey = getTmdbApiKey()
+
+  if (!hasTmdbAuth()) {
+    return new Set()
+  }
+
+  const sessionId = getSessionId()
+  if (!sessionId) {
+    return new Set()
+  }
+
+  let accountInfo: { accountId: number } | null
+  try {
+    accountInfo = await getAccountInfo()
+  } catch (error) {
+    fail('TMDB get favorite TVs error - failed to get account info:', error)
+    return new Set()
+  }
+
+  if (!accountInfo) {
+    return new Set()
+  }
+
+  try {
+    const apiUrl = `${TMDB.API_BASE_URL}/account/${accountInfo.accountId}/favorite/tv?api_key=${apiKey}&session_id=${sessionId}`
+
+    const favoriteIds = new Set<number>()
+    let page = 1
+    let totalPages = 1
+
+    do {
+      const response = await fetch(`${apiUrl}&page=${page}`, {
+        headers: {
+          accept: 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
+        fail(`TMDB get favorite TVs failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
+        break
+      }
+
+      const data = (await response.json()) as {
+        page: number
+        results: Array<{ id: number }>
+        total_pages: number
+        total_results: number
+      }
+
+      data.results.forEach((tv) => {
+        favoriteIds.add(tv.id)
+      })
+
+      totalPages = data.total_pages
+      page++
+    } while (page <= totalPages)
+
+    info(`Successfully fetched ${favoriteIds.size} favorite TV series`)
+    return favoriteIds
+  } catch (error) {
+    fail('TMDB get favorite TVs error:', error)
+    return new Set()
+  }
+}
+
+/**
  * Get user's favorite movies list
  * @returns Set of favorite movie IDs
  */
@@ -471,6 +588,74 @@ export async function getFavoriteMovies(): Promise<Set<number>> {
   } catch (error) {
     fail('TMDB get favorite movies error:', error)
     return new Set()
+  }
+}
+
+/**
+ * Add TV series to favorites list
+ * @param tvId TMDB TV ID
+ * @param favorite Whether to favorite (true=add, false=remove)
+ */
+export async function addTVToFavorites(tvId: number, favorite = true): Promise<boolean> {
+  const apiKey = getTmdbApiKey()
+
+  if (!hasTmdbAuth()) {
+    throw new Error('TMDB authentication not configured. Favorite feature requires TMDB_SESSION_ID. ' + 'Please set TMDB_SESSION_ID environment variable or skip this feature.')
+  }
+
+  const sessionId = getSessionId()
+  if (!sessionId) {
+    throw new Error('Failed to get TMDB session ID. Please check your TMDB_SESSION_ID configuration.')
+  }
+
+  let accountInfo: { accountId: number } | null
+  try {
+    accountInfo = await getAccountInfo()
+  } catch (error) {
+    throw error
+  }
+
+  if (!accountInfo) {
+    throw new Error(
+      'Failed to get TMDB account information. Please check:\n' +
+        '1. TMDB_SESSION_ID is correctly configured\n' +
+        '2. Session ID is valid (may be expired, need to get a new one)\n' +
+        '3. TMDB_API_KEY is correctly configured\n' +
+        '4. Network connection is normal'
+    )
+  }
+
+  try {
+    const apiUrl = `${TMDB.API_BASE_URL}/account/${accountInfo.accountId}/favorite?api_key=${apiKey}&session_id=${sessionId}`
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        media_type: 'tv',
+        media_id: tvId,
+        favorite,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
+      fail(`TMDB add TV to favorites failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
+      throw new Error(`Failed to ${favorite ? 'add' : 'remove'} TV from favorites: ${response.statusText}`)
+    }
+
+    const data = (await response.json()) as { status_code: number; status_message: string }
+    if (data.status_code === 1 || data.status_code === 12 || data.status_code === 13) {
+      return true
+    }
+
+    throw new Error(data.status_message || 'Unknown error')
+  } catch (error) {
+    fail('TMDB add TV to favorites error:', error)
+    throw error
   }
 }
 

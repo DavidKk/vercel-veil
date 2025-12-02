@@ -14,6 +14,7 @@ jest.mock('@/services/movies', () => ({
   getMoviesFromGist: jest.fn(),
   getResultFromCache: jest.fn(),
   setResultToCache: jest.fn(),
+  getMoviesListWithAutoUpdate: jest.fn(),
 }))
 
 jest.mock('@/services/tmdb', () => ({
@@ -34,7 +35,7 @@ jest.mock('@/services/logger', () => ({
 import { favoriteMovie, getFavoriteMovieIds, getMoviesList, getMoviesListWithGistCache, isFavoriteFeatureAvailable } from '@/app/actions/movies/index'
 import { validateCookie } from '@/services/auth/access'
 import { getMergedMoviesList } from '@/services/maoyan'
-import { getMoviesFromGist, getResultFromCache, setResultToCache } from '@/services/movies'
+import { getMoviesListWithAutoUpdate } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 
@@ -107,49 +108,24 @@ describe('app/actions/movies', () => {
       },
     ]
 
-    const mockCacheData = {
-      current: {
-        date: '2024-01-15',
-        timestamp: Date.now() - 1000,
-        movies: mockMovies,
-        metadata: {
-          totalCount: 1,
-          description: 'Test cache',
-        },
-      },
-      previous: {
-        date: '2024-01-14',
-        timestamp: Date.now() - 86400000,
-        movies: [],
-        metadata: {
-          totalCount: 0,
-          description: 'Previous cache',
-        },
-      },
-    }
-
     it('should return cached result when result cache is available', async () => {
       ;(validateCookie as jest.Mock).mockResolvedValue(true)
-      ;(getResultFromCache as jest.Mock).mockReturnValue(mockMovies)
+      ;(getMoviesListWithAutoUpdate as jest.Mock).mockResolvedValue(mockMovies)
 
       const result = await getMoviesListWithGistCache()
 
       expect(validateCookie).toHaveBeenCalled()
-      expect(getResultFromCache).toHaveBeenCalled()
-      expect(getMoviesFromGist).not.toHaveBeenCalled()
+      expect(getMoviesListWithAutoUpdate).toHaveBeenCalledWith({})
       expect(result).toEqual(mockMovies)
     })
 
     it('should return GIST cache when available', async () => {
       ;(validateCookie as jest.Mock).mockResolvedValue(true)
-      ;(getResultFromCache as jest.Mock).mockReturnValue(null)
-      ;(getMoviesFromGist as jest.Mock).mockResolvedValue(mockCacheData)
+      ;(getMoviesListWithAutoUpdate as jest.Mock).mockResolvedValue(mockMovies)
 
       const result = await getMoviesListWithGistCache()
 
-      expect(getMoviesFromGist).toHaveBeenCalled()
-      expect(setResultToCache).toHaveBeenCalledWith(mockMovies)
-      expect(getMergedMoviesList).not.toHaveBeenCalled()
+      expect(getMoviesListWithAutoUpdate).toHaveBeenCalledWith({})
       expect(result).toEqual(mockMovies)
     })
 
@@ -165,14 +141,11 @@ describe('app/actions/movies', () => {
       ]
 
       ;(validateCookie as jest.Mock).mockResolvedValue(true)
-      ;(getResultFromCache as jest.Mock).mockReturnValue(null)
-      ;(getMoviesFromGist as jest.Mock).mockResolvedValue(null)
-      ;(getMergedMoviesList as jest.Mock).mockResolvedValue(newMovies)
+      ;(getMoviesListWithAutoUpdate as jest.Mock).mockResolvedValue(newMovies)
 
       const result = await getMoviesListWithGistCache()
 
-      expect(getMoviesFromGist).toHaveBeenCalled()
-      expect(getMergedMoviesList).toHaveBeenCalled()
+      expect(getMoviesListWithAutoUpdate).toHaveBeenCalledWith({})
       expect(result).toEqual(newMovies)
     })
 
@@ -188,14 +161,11 @@ describe('app/actions/movies', () => {
       ]
 
       ;(validateCookie as jest.Mock).mockResolvedValue(true)
-      ;(getResultFromCache as jest.Mock).mockReturnValue(null)
-      ;(getMoviesFromGist as jest.Mock).mockRejectedValue(new Error('GIST error'))
-      ;(getMergedMoviesList as jest.Mock).mockResolvedValue(mockMovies)
+      ;(getMoviesListWithAutoUpdate as jest.Mock).mockResolvedValue(mockMovies)
 
       const result = await getMoviesListWithGistCache()
 
-      expect(getMoviesFromGist).toHaveBeenCalled()
-      expect(getMergedMoviesList).toHaveBeenCalled()
+      expect(getMoviesListWithAutoUpdate).toHaveBeenCalledWith({})
       expect(result).toEqual(mockMovies)
     })
 

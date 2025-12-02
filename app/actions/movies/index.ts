@@ -1,10 +1,10 @@
 'use server'
 
 import { validateCookie } from '@/services/auth/access'
-import { fail, info, warn } from '@/services/logger'
+import { fail } from '@/services/logger'
 import { getMergedMoviesList, type GetMergedMoviesListOptions } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
-import { getMoviesFromGist, getResultFromCache, setResultToCache } from '@/services/movies'
+import { getMoviesListWithAutoUpdate } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 
@@ -36,8 +36,8 @@ export async function getMoviesList(options: GetMergedMoviesListOptions = {}): P
  * Get merged movie list with GIST cache (Server Action)
  * Internal use only, requires authentication
  * Uses GIST for persistent storage and result cache for in-memory caching
- * Note: GIST updates are handled by cron job, this function only reads from cache
- * @param options Options for fetching movies (used only for fallback)
+ * Automatically updates GIST if cache is stale or missing
+ * @param options Options for fetching movies
  *   - includeTMDBPopular: Include popular movies from TMDB (default: true)
  *   - includeTMDBUpcoming: Include upcoming movies from TMDB, merged with now playing movies (default: true)
  */
@@ -48,41 +48,8 @@ export async function getMoviesListWithGistCache(options: GetMergedMoviesListOpt
     throw new Error('Unauthorized')
   }
 
-  // Check result cache first
-  const cachedResult = getResultFromCache()
-  if (cachedResult) {
-    info('getMoviesListWithGistCache - Cache hit')
-    return cachedResult
-  }
-
-  // Read from GIST - allow errors to propagate if GIST is critical
-  // But catch GIST errors specifically to allow fallback
-  let cacheData: Awaited<ReturnType<typeof getMoviesFromGist>> | null = null
-  let gistReadFailed = false
-  try {
-    cacheData = await getMoviesFromGist()
-  } catch (error) {
-    // GIST read failure - will fallback to getMoviesList if no cache data
-    gistReadFailed = true
-    warn('getMoviesListWithGistCache - GIST read failed, falling back to API:', error)
-  }
-
-  if (cacheData) {
-    // Use cached data (GIST updates are handled by cron job)
-    const movies = cacheData.current.movies
-    setResultToCache(movies)
-    info('getMoviesListWithGistCache - GIST cache hit')
-    return movies
-  }
-
-  // If GIST read failed or no cache data, fallback to getMoviesList
-  if (gistReadFailed || !cacheData) {
-    warn('getMoviesListWithGistCache - No GIST cache available, falling back to getMoviesList')
-    return getMoviesList(options)
-  }
-
-  // This should never be reached, but TypeScript needs it
-  return getMoviesList(options)
+  // Use unified function that handles both reading and writing to GIST
+  return await getMoviesListWithAutoUpdate(options)
 }
 
 /**
