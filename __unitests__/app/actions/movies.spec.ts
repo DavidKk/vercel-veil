@@ -8,17 +8,12 @@ jest.mock('@/services/auth/access', () => ({
 
 jest.mock('@/services/maoyan', () => ({
   getMergedMoviesList: jest.fn(),
-  getMergedMoviesListWithoutCache: jest.fn(),
 }))
 
-jest.mock('@/services/movies-cache', () => ({
-  createInitialCacheData: jest.fn(),
+jest.mock('@/services/movies', () => ({
   getMoviesFromGist: jest.fn(),
   getResultFromCache: jest.fn(),
-  saveMoviesToGist: jest.fn(),
   setResultToCache: jest.fn(),
-  shouldUpdate: jest.fn(),
-  updateCacheData: jest.fn(),
 }))
 
 jest.mock('@/services/tmdb', () => ({
@@ -38,8 +33,8 @@ jest.mock('@/services/logger', () => ({
 
 import { favoriteMovie, getFavoriteMovieIds, getMoviesList, getMoviesListWithGistCache, isFavoriteFeatureAvailable } from '@/app/actions/movies/index'
 import { validateCookie } from '@/services/auth/access'
-import { getMergedMoviesList, getMergedMoviesListWithoutCache } from '@/services/maoyan'
-import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from '@/services/movies'
+import { getMergedMoviesList } from '@/services/maoyan'
+import { getMoviesFromGist, getResultFromCache, setResultToCache } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 
@@ -145,58 +140,20 @@ describe('app/actions/movies', () => {
       expect(result).toEqual(mockMovies)
     })
 
-    it('should return GIST cache when available and not expired', async () => {
+    it('should return GIST cache when available', async () => {
       ;(validateCookie as jest.Mock).mockResolvedValue(true)
       ;(getResultFromCache as jest.Mock).mockReturnValue(null)
       ;(getMoviesFromGist as jest.Mock).mockResolvedValue(mockCacheData)
-      ;(shouldUpdate as jest.Mock).mockReturnValue(false)
 
       const result = await getMoviesListWithGistCache()
 
       expect(getMoviesFromGist).toHaveBeenCalled()
-      expect(shouldUpdate).toHaveBeenCalledWith(mockCacheData.current.timestamp)
       expect(setResultToCache).toHaveBeenCalledWith(mockMovies)
-      expect(getMergedMoviesListWithoutCache).not.toHaveBeenCalled()
+      expect(getMergedMoviesList).not.toHaveBeenCalled()
       expect(result).toEqual(mockMovies)
     })
 
-    it('should fetch new data when GIST cache is expired', async () => {
-      const newMovies: MergedMovie[] = [
-        {
-          maoyanId: 3,
-          name: 'New Movie',
-          poster: 'https://example.com/poster3.jpg',
-          source: 'topRated',
-          sources: ['topRated'],
-        },
-      ]
-
-      const updatedCacheData = {
-        ...mockCacheData,
-        current: {
-          ...mockCacheData.current,
-          movies: newMovies,
-        },
-      }
-
-      ;(validateCookie as jest.Mock).mockResolvedValue(true)
-      ;(getResultFromCache as jest.Mock).mockReturnValue(null)
-      ;(getMoviesFromGist as jest.Mock).mockResolvedValue(mockCacheData)
-      ;(shouldUpdate as jest.Mock).mockReturnValue(true)
-      ;(getMergedMoviesListWithoutCache as jest.Mock).mockResolvedValue(newMovies)
-      ;(updateCacheData as jest.Mock).mockReturnValue(updatedCacheData)
-      ;(saveMoviesToGist as jest.Mock).mockResolvedValue(undefined)
-
-      const result = await getMoviesListWithGistCache()
-
-      expect(getMergedMoviesListWithoutCache).toHaveBeenCalled()
-      expect(updateCacheData).toHaveBeenCalledWith(mockCacheData.current, newMovies)
-      expect(saveMoviesToGist).toHaveBeenCalledWith(updatedCacheData)
-      expect(setResultToCache).toHaveBeenCalledWith(newMovies)
-      expect(result).toEqual(newMovies)
-    })
-
-    it('should create initial cache when GIST cache does not exist', async () => {
+    it('should fallback to getMoviesList when GIST cache does not exist', async () => {
       const newMovies: MergedMovie[] = [
         {
           maoyanId: 1,
@@ -207,43 +164,19 @@ describe('app/actions/movies', () => {
         },
       ]
 
-      const initialCacheData = {
-        current: {
-          date: '2024-01-15',
-          timestamp: Date.now(),
-          movies: newMovies,
-          metadata: {
-            totalCount: 1,
-            description: 'Initial cache',
-          },
-        },
-        previous: {
-          date: '2024-01-15',
-          timestamp: Date.now(),
-          movies: [],
-          metadata: {
-            totalCount: 0,
-            description: 'Initial previous data',
-          },
-        },
-      }
-
       ;(validateCookie as jest.Mock).mockResolvedValue(true)
       ;(getResultFromCache as jest.Mock).mockReturnValue(null)
       ;(getMoviesFromGist as jest.Mock).mockResolvedValue(null)
-      ;(getMergedMoviesListWithoutCache as jest.Mock).mockResolvedValue(newMovies)
-      ;(createInitialCacheData as jest.Mock).mockReturnValue(initialCacheData)
-      ;(saveMoviesToGist as jest.Mock).mockResolvedValue(undefined)
+      ;(getMergedMoviesList as jest.Mock).mockResolvedValue(newMovies)
 
       const result = await getMoviesListWithGistCache()
 
-      expect(getMergedMoviesListWithoutCache).toHaveBeenCalled()
-      expect(createInitialCacheData).toHaveBeenCalledWith(newMovies)
-      expect(saveMoviesToGist).toHaveBeenCalledWith(initialCacheData)
+      expect(getMoviesFromGist).toHaveBeenCalled()
+      expect(getMergedMoviesList).toHaveBeenCalled()
       expect(result).toEqual(newMovies)
     })
 
-    it('should fallback to getMoviesList on error', async () => {
+    it('should fallback to getMoviesList when GIST read fails', async () => {
       const mockMovies: MergedMovie[] = [
         {
           maoyanId: 1,
@@ -261,6 +194,7 @@ describe('app/actions/movies', () => {
 
       const result = await getMoviesListWithGistCache()
 
+      expect(getMoviesFromGist).toHaveBeenCalled()
       expect(getMergedMoviesList).toHaveBeenCalled()
       expect(result).toEqual(mockMovies)
     })

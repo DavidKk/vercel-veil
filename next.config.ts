@@ -11,11 +11,6 @@ const nextConfig: NextConfig = {
       use: 'raw-loader',
     })
     config.module.rules.push({
-      test: /\.html$/,
-      resourceQuery: /raw/,
-      use: 'raw-loader',
-    })
-    config.module.rules.push({
       test: /\.hbs$/,
       resourceQuery: /raw/,
       use: 'raw-loader',

@@ -12,12 +12,11 @@ export const runtime = 'nodejs'
 
 /**
  * Movies notification cron job
- * Checks for new movies in GIST cache and sends email notification if new movies are found
- * @param req Next.js request object
- * @returns Response with notification results
+ * Cron expression: 0 2 * * *
+ * Executes at UTC 02:00 daily
  */
 export const GET = cron(async (req: NextRequest) => {
-  info('Movies notification cron job started')
+  info('Movies notification handler started')
 
   // Get new movies from cache
   const newMovies = getNewMoviesFromCache(await getMoviesFromGist())

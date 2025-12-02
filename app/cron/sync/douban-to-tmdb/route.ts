@@ -10,10 +10,9 @@ import { syncMoviesToTMDBFavorites } from '@/services/tmdb/sync'
 export const runtime = 'nodejs'
 
 /**
- * Sync Douban movie list to TMDB favorites cron job
- * Called by Vercel Cron Jobs or manually with authentication
- * @param req Next.js request object
- * @returns Response with sync results
+ * Douban to TMDB sync cron job
+ * Cron expression: 0 19 * * *
+ * Executes at UTC 19:00 daily
  */
 export const GET = cron(async () => {
   // Check if TMDB auth is configured
