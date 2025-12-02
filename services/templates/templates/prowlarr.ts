@@ -4,6 +4,24 @@ import type { EmailTemplateDefinition } from '../types'
 
 export const prowlarrTemplates: EmailTemplateDefinition[] = [
   {
+    id: 'prowlarr-test',
+    name: 'Prowlarr - Test',
+    description: 'Template for Prowlarr test notifications',
+    html: prowlarrDefault,
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    defaultVariables: {
+      indexerName: 'Test Indexer',
+      eventType: 'Test',
+      actionLabel: 'Test',
+      instanceName: 'prowlarr-main',
+      protocol: 'Torrent',
+      statusChange: 'N/A',
+      message: 'This is a test notification from Prowlarr to verify webhook connectivity.',
+      indexerDetails: '',
+      releaseDetails: '',
+    },
+  },
+  {
     id: 'prowlarr-grab',
     name: 'Prowlarr - Grab',
     description: 'Template for Prowlarr grab notifications',

@@ -4,6 +4,26 @@ import type { EmailTemplateDefinition } from '../types'
 
 export const radarrTemplates: EmailTemplateDefinition[] = [
   {
+    id: 'radarr-test',
+    name: 'Radarr - Test',
+    description: 'Template for Radarr test notifications',
+    html: radarrDefault,
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    defaultVariables: {
+      movieTitle: 'Test Movie',
+      eventType: 'Test',
+      actionLabel: 'Test',
+      year: '2024',
+      instanceName: 'radarr-uplink',
+      downloadClient: 'qBittorrent · Auto',
+      isUpgrade: 'No',
+      releaseDetails: '',
+      coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
+      synopsis: 'This is a test notification from Radarr to verify webhook connectivity.',
+      detailUrl: 'https://www.themoviedb.org',
+    },
+  },
+  {
     id: 'radarr-grab',
     name: 'Radarr - Grab',
     description: 'Template for Radarr grab notifications',

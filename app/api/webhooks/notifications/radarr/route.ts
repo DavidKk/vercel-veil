@@ -16,6 +16,23 @@ import { prepareRadarrTemplateVariables } from './view'
 export const runtime = 'nodejs'
 
 /**
+ * Map Radarr event type to template ID
+ * @param eventType Event type from webhook payload
+ * @returns Template ID for the event type, or null if not found
+ */
+function getTemplateIdForEventType(eventType: string): string | null {
+  const templateMap: Record<string, string> = {
+    Test: 'radarr-test',
+    Grab: 'radarr-grab',
+    Download: 'radarr-download',
+    Upgrade: 'radarr-upgrade',
+    MovieDelete: 'radarr-moviedelete',
+    MovieFileDelete: 'radarr-moviefiledelete',
+  }
+  return templateMap[eventType] ?? null
+}
+
+/**
  * Handle Radarr webhook POST requests
  * Processes movie download/upgrade notifications and sends email using template system
  * @param req Next.js request object
@@ -36,9 +53,16 @@ export const POST = api(async (req: NextRequest) => {
   const preferredTitle = await resolvePreferredTitle({ defaultTitle, mediaType: 'movie' })
   const variables = await prepareRadarrTemplateVariables(payload, preferredTitle)
 
-  const template = getTemplate('radarr-default')
+  // Map event type to template ID
+  const templateId = getTemplateIdForEventType(payload.eventType)
+  if (!templateId) {
+    fail(`Template ID not found for event type: ${payload.eventType}`)
+    return jsonInvalidParameters('template not found')
+  }
+
+  const template = getTemplate(templateId)
   if (!template) {
-    fail('Template not found: radarr-default')
+    fail(`Template not found: ${templateId}`)
     return jsonInvalidParameters('template not found')
   }
 

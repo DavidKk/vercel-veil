@@ -20,6 +20,7 @@ export const runtime = 'nodejs'
  */
 function getTemplateIdForEventType(eventType: string): string | null {
   const templateMap: Record<string, string> = {
+    Test: 'prowlarr-test',
     Grab: 'prowlarr-grab',
     IndexerStatusChange: 'prowlarr-indexerstatuschange',
     IndexerUpdate: 'prowlarr-indexerupdate',

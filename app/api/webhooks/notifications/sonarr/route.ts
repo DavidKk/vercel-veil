@@ -15,6 +15,24 @@ import { prepareSonarrTemplateVariables } from './view'
 export const runtime = 'nodejs'
 
 /**
+ * Map Sonarr event type to template ID
+ * @param eventType Event type from webhook payload
+ * @returns Template ID for the event type, or null if not found
+ */
+function getTemplateIdForEventType(eventType: string): string | null {
+  const templateMap: Record<string, string> = {
+    Test: 'sonarr-test',
+    Grab: 'sonarr-grab',
+    Download: 'sonarr-download',
+    Upgrade: 'sonarr-upgrade',
+    Rename: 'sonarr-rename',
+    EpisodeFileDelete: 'sonarr-episodefiledelete',
+    SeriesDelete: 'sonarr-seriesdelete',
+  }
+  return templateMap[eventType] ?? null
+}
+
+/**
  * Handle Sonarr webhook POST requests
  * Processes TV series download/upgrade notifications and sends email using template system
  * @param req Next.js request object
@@ -33,9 +51,16 @@ export const POST = api(async (req: NextRequest) => {
   const preferredTitle = await resolvePreferredTitle({ defaultTitle: payload.series?.title, mediaType: 'series' })
   const variables = await prepareSonarrTemplateVariables(payload, preferredTitle)
 
-  const template = getTemplate('sonarr-default')
+  // Map event type to template ID
+  const templateId = getTemplateIdForEventType(payload.eventType)
+  if (!templateId) {
+    fail(`Template ID not found for event type: ${payload.eventType}`)
+    return jsonInvalidParameters('template not found')
+  }
+
+  const template = getTemplate(templateId)
   if (!template) {
-    fail('Template not found: sonarr-default')
+    fail(`Template not found: ${templateId}`)
     return jsonInvalidParameters('template not found')
   }
 

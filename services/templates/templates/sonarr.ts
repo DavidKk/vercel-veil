@@ -4,6 +4,26 @@ import type { EmailTemplateDefinition } from '../types'
 
 export const sonarrTemplates: EmailTemplateDefinition[] = [
   {
+    id: 'sonarr-test',
+    name: 'Sonarr - Test',
+    description: 'Template for Sonarr test notifications',
+    html: sonarrDefault,
+    variables: ['seriesTitle', 'eventType', 'actionLabel', 'instanceName', 'downloadClient', 'isUpgrade', 'episodeList', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    defaultVariables: {
+      seriesTitle: 'Test Series',
+      eventType: 'Test',
+      actionLabel: 'Test',
+      instanceName: 'sonarr-lab',
+      downloadClient: 'qBittorrent · Auto',
+      isUpgrade: 'No',
+      episodeList: '<div class="stack-item">S01E01 · Test Episode · 2024-01-01</div>',
+      releaseDetails: '',
+      coverImage: 'https://images.unsplash.com/photo-1505685296765-3a2736de412f?auto=format&fit=crop&w=960&q=80',
+      synopsis: 'This is a test notification from Sonarr to verify webhook connectivity.',
+      detailUrl: 'https://www.thetvdb.com',
+    },
+  },
+  {
     id: 'sonarr-grab',
     name: 'Sonarr - Grab',
     description: 'Template for Sonarr grab notifications',
