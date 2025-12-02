@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Sonarr Notification</title>
+    <title>Radarr Notification</title>
     <style>
       body {
         margin: 0;
@@ -29,8 +29,8 @@
         gap: 16px;
       }
       .badge {
-        background: #111827;
-        color: #ffffff;
+        background: #be123c;
+        color: #fff;
         padding: 6px 14px;
         border-radius: 999px;
         font-size: 12px;
@@ -83,7 +83,7 @@
         margin-top: 28px;
         padding: 20px;
         border-radius: 14px;
-        background: #f8fafc;
+        background: #f4f6fb;
       }
       .stack {
         display: flex;
@@ -101,7 +101,7 @@
       .section h2 {
         margin: 0 0 14px;
         font-size: 16px;
-        color: #0f172a;
+        color: #111827;
       }
       .footer {
         margin-top: 32px;
@@ -124,20 +124,20 @@
       <div class="card">
         <div class="heading">
           <div>
-            <p style="margin: 0; text-transform: uppercase; letter-spacing: 0.2em; color: #94a3b8; font-size: 12px">Sonarr</p>
-            <h1 style="margin: 4px 0; font-size: 24px; color: #0f172a">{{seriesTitle}}</h1>
+            <p style="margin: 0; text-transform: uppercase; letter-spacing: 0.2em; color: #f43f5e; font-size: 12px">Radarr</p>
+            <h1 style="margin: 4px 0; font-size: 24px; color: #111827">{{movieTitle}}</h1>
           </div>
           <span class="badge">{{actionLabel}}</span>
         </div>
 
         <div class="hero">
           <div class="hero-image">
-            <img src="{{coverImage}}" alt="cover image" />
+            <img src="{{coverImage}}" alt="poster" />
           </div>
           <div class="hero-content">
             <p style="margin: 0 0 8px; color: #475569; line-height: 1.7; font-size: 14px">{{synopsis}}</p>
             <p style="margin: 0">
-              <a href="{{detailUrl}}" target="_blank" rel="noopener noreferrer" style="font-size: 13px; color: #0284c7; text-decoration: none"> View on TheTVDB → </a>
+              <a href="{{detailUrl}}" target="_blank" rel="noopener noreferrer" style="font-size: 13px; color: #0284c7; text-decoration: none"> View on TMDB → </a>
             </p>
           </div>
         </div>
@@ -146,6 +146,10 @@
           <div class="info-item">
             <span>Event Type</span>
             <strong>{{eventType}}</strong>
+          </div>
+          <div class="info-item">
+            <span>Year</span>
+            <strong>{{year}}</strong>
           </div>
           <div class="info-item">
             <span>Instance</span>
@@ -166,11 +170,6 @@
         </div>
 
         <div class="section">
-          <h2>Episode List</h2>
-          <div class="stack">{{episodeList}}</div>
-        </div>
-
-        <div class="section">
           <h2>Release Information</h2>
           <div class="stack">{{releaseDetails}}</div>
         </div>
@@ -180,3 +179,4 @@
     </div>
   </body>
 </html>
+

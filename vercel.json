@@ -5,6 +5,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/sync/movies-gist",
+      "schedule": "0 4,12,20 * * *"
+    },
+    {
       "path": "/api/cron/notification/movies",
       "schedule": "0 10 * * *"
     }

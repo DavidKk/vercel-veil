@@ -2,9 +2,9 @@
 
 import { validateCookie } from '@/services/auth/access'
 import { fail, info, warn } from '@/services/logger'
-import { getMergedMoviesList, type GetMergedMoviesListOptions, getMergedMoviesListWithoutCache } from '@/services/maoyan'
+import { getMergedMoviesList, type GetMergedMoviesListOptions } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
-import { createInitialCacheData, getMoviesFromGist, getResultFromCache, saveMoviesToGist, setResultToCache, shouldUpdate, updateCacheData } from '@/services/movies'
+import { getMoviesFromGist, getResultFromCache, setResultToCache } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 
@@ -36,7 +36,8 @@ export async function getMoviesList(options: GetMergedMoviesListOptions = {}): P
  * Get merged movie list with GIST cache (Server Action)
  * Internal use only, requires authentication
  * Uses GIST for persistent storage and result cache for in-memory caching
- * @param options Options for fetching movies
+ * Note: GIST updates are handled by cron job, this function only reads from cache
+ * @param options Options for fetching movies (used only for fallback)
  *   - includeTMDBPopular: Include popular movies from TMDB (default: true)
  *   - includeTMDBUpcoming: Include upcoming movies from TMDB, merged with now playing movies (default: true)
  */
@@ -67,57 +68,21 @@ export async function getMoviesListWithGistCache(options: GetMergedMoviesListOpt
   }
 
   if (cacheData) {
-    // Check if update is needed
-    const needsUpdate = shouldUpdate(cacheData.current.timestamp)
-
-    if (!needsUpdate) {
-      // Use cached data
-      const movies = cacheData.current.movies
-      setResultToCache(movies)
-      info('getMoviesListWithGistCache - GIST cache hit')
-      return movies
-    } else {
-      const age = Date.now() - cacheData.current.timestamp
-      info(`getMoviesListWithGistCache - GIST data needs update (age=${Math.round(age / 1000 / 60)}min)`)
-    }
-  } else {
-    info('getMoviesListWithGistCache - No GIST cache found')
+    // Use cached data (GIST updates are handled by cron job)
+    const movies = cacheData.current.movies
+    setResultToCache(movies)
+    info('getMoviesListWithGistCache - GIST cache hit')
+    return movies
   }
 
-  // If GIST read failed and no cache data, fallback to getMoviesList immediately
-  if (gistReadFailed && !cacheData) {
-    warn('getMoviesListWithGistCache - GIST read failed and no cache, falling back to getMoviesList')
+  // If GIST read failed or no cache data, fallback to getMoviesList
+  if (gistReadFailed || !cacheData) {
+    warn('getMoviesListWithGistCache - No GIST cache available, falling back to getMoviesList')
     return getMoviesList(options)
   }
 
-  // Need to update: fetch new data
-  // Let API errors propagate - they indicate real problems
-  // But catch errors to allow fallback to getMoviesList
-  try {
-    const newMovies = await getMergedMoviesListWithoutCache(options)
-
-    if (!cacheData) {
-      // First time: create initial cache
-      cacheData = createInitialCacheData(newMovies)
-    } else {
-      // Update existing cache
-      cacheData = updateCacheData(cacheData.current, newMovies)
-    }
-
-    // Save to GIST (async, don't wait) - failures are non-critical
-    saveMoviesToGist(cacheData).catch((error) => {
-      fail('Failed to save movies cache to GIST (non-blocking):', error)
-    })
-
-    // Set result cache
-    setResultToCache(cacheData.current.movies)
-
-    return cacheData.current.movies
-  } catch (error) {
-    // Fallback to getMoviesList if getMergedMoviesListWithoutCache fails
-    warn('getMoviesListWithGistCache - Falling back to getMoviesList:', error)
-    return getMoviesList(options)
-  }
+  // This should never be reached, but TypeScript needs it
+  return getMoviesList(options)
 }
 
 /**

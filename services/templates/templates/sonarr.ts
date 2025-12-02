@@ -1,4 +1,4 @@
-import sonarrDefault from '@/templates/emails/sonarr-default.html?raw'
+import sonarrDefault from '@/templates/emails/sonarr-default.hbs?raw'
 
 import type { EmailTemplateDefinition } from '../types'
 

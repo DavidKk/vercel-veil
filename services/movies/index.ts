@@ -1,5 +1,9 @@
+import { fail, info } from '@/services/logger'
+import type { GetMergedMoviesListOptions } from '@/services/maoyan'
+import { getMergedMoviesListWithoutCache } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
 
+import { createInitialCacheData, getMoviesFromGist, saveMoviesToGist, setResultToCache, updateCacheData } from './cache'
 import type { MoviesCacheData } from './types'
 
 // Re-export types
@@ -72,4 +76,60 @@ export function getNewMoviesFromCache(cacheData: MoviesCacheData | null): Merged
 
   // Get new movies by comparing current and previous
   return getNewMovies(cacheData.current.movies, cacheData.previous.movies)
+}
+
+/**
+ * Update movies GIST cache
+ * Fetches new movies data and updates GIST cache
+ * This function is designed to be called by cron jobs
+ * @param options Options for fetching movies
+ * @returns Updated movies list and cache data
+ * @throws Error if update fails
+ */
+export async function updateMoviesGist(options: GetMergedMoviesListOptions = {}): Promise<{
+  movies: MergedMovie[]
+  cacheData: MoviesCacheData
+}> {
+  info('updateMoviesGist - Starting GIST update')
+
+  // Fetch new movies data
+  const newMovies = await getMergedMoviesListWithoutCache(options)
+
+  // Read existing cache data
+  let cacheData: MoviesCacheData | null = null
+  try {
+    cacheData = await getMoviesFromGist()
+  } catch (error) {
+    // If GIST read fails, create new cache
+    info('updateMoviesGist - GIST read failed, creating new cache:', error)
+  }
+
+  // Create or update cache data
+  if (!cacheData) {
+    // First time: create initial cache
+    cacheData = createInitialCacheData(newMovies)
+    info('updateMoviesGist - Created initial cache data')
+  } else {
+    // Update existing cache
+    cacheData = updateCacheData(cacheData.current, newMovies)
+    info('updateMoviesGist - Updated existing cache data')
+  }
+
+  // Save to GIST
+  try {
+    await saveMoviesToGist(cacheData)
+    info('updateMoviesGist - Successfully saved to GIST')
+  } catch (error) {
+    fail('updateMoviesGist - Failed to save to GIST:', error)
+    throw error
+  }
+
+  // Clear result cache to force refresh on next read
+  // Note: We don't have a clearCache function, but setting new cache will work
+  setResultToCache(cacheData.current.movies)
+
+  return {
+    movies: cacheData.current.movies,
+    cacheData,
+  }
 }

@@ -13,7 +13,7 @@
     "postinstall": "node --experimental-modules ./scripts/postinstall.mjs",
     "preinstall": "node --experimental-modules ./scripts/preinstall.mjs",
     "clear": "rimraf --glob ./libs",
-    "format": "prettier --config .prettierrc.js --write \"**/*.{js,jsx,ts,tsx,d.ts,vue,md,json,yml,yaml}\"",
+    "format": "prettier --config .prettierrc.js --write \"**/*.{js,jsx,ts,tsx,d.ts,vue,md,json,yml,yaml,.html,.hbs}\"",
     "lint": "pnpm lint:ts",
     "lint:ts": "eslint -c eslint.config.mjs --fix .",
     "dev": "next dev",

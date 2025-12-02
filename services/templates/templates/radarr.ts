@@ -1,4 +1,4 @@
-import radarrDefault from '@/templates/emails/radarr-default.html?raw'
+import radarrDefault from '@/templates/emails/radarr-default.hbs?raw'
 
 import type { EmailTemplateDefinition } from '../types'
 

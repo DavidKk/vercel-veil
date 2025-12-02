@@ -1,4 +1,4 @@
-import prowlarrDefault from '@/templates/emails/prowlarr-default.html?raw'
+import prowlarrDefault from '@/templates/emails/prowlarr-default.hbs?raw'
 
 import type { EmailTemplateDefinition } from '../types'
 

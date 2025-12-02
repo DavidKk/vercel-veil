@@ -1,4 +1,4 @@
-import moviesNew from '@/templates/emails/movies-new.html?raw'
+import moviesNew from '@/templates/emails/movies-new.hbs?raw'
 
 import type { EmailTemplateDefinition } from '../types'
 
