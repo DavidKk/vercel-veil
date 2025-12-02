@@ -1,4 +1,5 @@
 import { cron } from '@/initializer/controller'
+import { standardResponseSuccess } from '@/initializer/response'
 import { info } from '@/services/logger'
 import { updateMoviesGist } from '@/services/movies'
 
@@ -16,10 +17,5 @@ export const GET = cron(async () => {
 
   info(`Movies GIST sync completed: ${movies.length} movies, ${cacheData.current.metadata.totalCount} total`)
 
-  return {
-    success: true,
-    moviesCount: movies.length,
-    totalCount: cacheData.current.metadata.totalCount,
-    timestamp: cacheData.current.timestamp,
-  }
+  return standardResponseSuccess()
 })

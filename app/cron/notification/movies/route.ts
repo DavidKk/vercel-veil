@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 
 import { cron } from '@/initializer/controller'
+import { standardResponseSuccess } from '@/initializer/response'
 import { fail, info } from '@/services/logger'
 import { getMoviesFromGist, getNewMoviesFromCache } from '@/services/movies'
 import { sendNotification } from '@/services/resend'
@@ -23,7 +24,7 @@ export const GET = cron(async (req: NextRequest) => {
 
   if (newMovies.length === 0) {
     info('No new movies found, skipping notification')
-    return { success: true, notified: false }
+    return standardResponseSuccess()
   }
 
   info(`Found ${newMovies.length} new movies, preparing notification email`)
@@ -68,5 +69,5 @@ export const GET = cron(async (req: NextRequest) => {
 
   info(`Notification email sent successfully for ${newMovies.length} new movies`)
 
-  return { success: true, notified: true, newMoviesCount: newMovies.length }
+  return standardResponseSuccess()
 })

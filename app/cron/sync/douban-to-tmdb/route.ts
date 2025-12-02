@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser'
 
 import { cron } from '@/initializer/controller'
-import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
+import { standardResponseSuccess } from '@/initializer/response'
 import { type DoubanRSSDTO, extractSeriesListFromDoubanRSSDTO, fetchDoubanRSS } from '@/services/douban'
 import { fail, info } from '@/services/logger'
 import { hasTmdbAuth } from '@/services/tmdb/env'
@@ -17,7 +17,8 @@ export const runtime = 'nodejs'
 export const GET = cron(async () => {
   // Check if TMDB auth is configured
   if (!hasTmdbAuth()) {
-    return jsonInvalidParameters('TMDB authentication not configured. Please set TMDB_SESSION_ID environment variable.')
+    fail('TMDB authentication not configured. Please set TMDB_SESSION_ID environment variable.')
+    return standardResponseSuccess()
   }
 
   // Get Douban RSS URL from environment variable
@@ -25,7 +26,7 @@ export const GET = cron(async () => {
 
   if (!url || typeof url !== 'string') {
     fail('Missing DOUBAN_RSS_URL environment variable')
-    return jsonInvalidParameters('DOUBAN_RSS_URL environment variable is required (e.g., https://www.douban.com/feed/people/148049852/interests)')
+    return standardResponseSuccess()
   }
 
   info(`Syncing Douban list to TMDB favorites: ${url}`)
@@ -35,7 +36,7 @@ export const GET = cron(async () => {
 
   if (!response.ok) {
     fail(`Failed to fetch RSS feed: ${response.status} ${response.statusText}`)
-    return jsonInvalidParameters(`HTTP error! status: ${response.status}`)
+    return standardResponseSuccess()
   }
 
   const xmlText = await response.text()
@@ -50,12 +51,7 @@ export const GET = cron(async () => {
 
   if (movies.length === 0) {
     info('No movies found in Douban list')
-    return standardResponseSuccess({
-      message: 'No movies found in Douban list',
-      synced: 0,
-      failed: 0,
-      total: 0,
-    })
+    return standardResponseSuccess()
   }
 
   info(`Found ${movies.length} movies, syncing to TMDB favorites...`)
@@ -63,23 +59,7 @@ export const GET = cron(async () => {
   // Sync movies to TMDB favorites (with search for missing IDs)
   const syncResult = await syncMoviesToTMDBFavorites(movies, { searchMissingIds: true })
 
-  const failedMovies = syncResult.results
-    .filter((r) => !r.success)
-    .map((r) => ({
-      title: r.title,
-      tmdbId: r.tmdbId,
-      error: r.error || 'Unknown error',
-    }))
-
   info(`Sync completed: ${syncResult.synced} newly synced, ${syncResult.skipped} already in favorites, ${syncResult.failed} failed out of ${syncResult.total} total`)
 
-  return standardResponseSuccess({
-    success: true,
-    message: `Synced ${syncResult.synced} new movies to TMDB favorites${syncResult.skipped > 0 ? `, ${syncResult.skipped} already in favorites` : ''}`,
-    synced: syncResult.synced,
-    skipped: syncResult.skipped,
-    failed: syncResult.failed,
-    total: syncResult.total,
-    failedMovies: failedMovies.length > 0 ? failedMovies : undefined,
-  })
+  return standardResponseSuccess()
 })
