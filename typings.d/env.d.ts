@@ -71,7 +71,8 @@ declare namespace NodeJS {
     /** Enable/disable cache (default: "1" for enabled, "0" for disabled) */
     CACHE?: string
 
-    /** Vercel Cron Job secret for authorization (Vercel adds this to Authorization header) */
+    /** Cron job secret for authorization (Bearer token in Authorization header) */
+    /** Used for cron job authentication, separate from API_TOKEN_SECRET */
     CRON_SECRET?: string
 
     /** Custom base URL for the application (e.g., "https://example.com" or "example.com") */

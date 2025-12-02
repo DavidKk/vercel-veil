@@ -5,6 +5,7 @@ import { validateCookie } from '@/services/auth/access'
 
 export const TOKEN_HEADER_NAME = process.env.API_TOKEN_HEADER ?? 'x-vv-token'
 const TOKEN_SECRET = process.env.API_TOKEN_SECRET
+const CRON_SECRET = process.env.CRON_SECRET
 const API_USERNAME = process.env.API_USERNAME
 const API_PASSWORD = process.env.API_PASSWORD
 
@@ -141,6 +142,37 @@ export async function ensureProwlarrAuthorized(req: NextRequest) {
   // Check Basic Auth (username/password) - required
   if (!checkBasicAuth(req)) {
     throw jsonUnauthorized('username and password required')
+  }
+}
+
+/**
+ * Check authorization via CRON_SECRET (Bearer token)
+ * @param req Next.js request object
+ * @returns true if authenticated via CRON_SECRET
+ */
+function checkCronSecretAuth(req: NextRequest): boolean {
+  if (!CRON_SECRET) {
+    return false
+  }
+
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false
+  }
+
+  const token = authHeader.substring(7)
+  return token === CRON_SECRET
+}
+
+/**
+ * Ensure authorization for cron jobs
+ * Only supports CRON_SECRET (Bearer token) authentication
+ * @param req Next.js request object
+ */
+export async function ensureCronAuthorized(req: NextRequest) {
+  // Check CRON_SECRET authentication (Bearer token) - required
+  if (!checkCronSecretAuth(req)) {
+    throw jsonUnauthorized('CRON_SECRET authentication required')
   }
 }
 
