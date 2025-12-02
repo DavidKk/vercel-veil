@@ -14,6 +14,22 @@ import { prepareProwlarrTemplateVariables } from './view'
 export const runtime = 'nodejs'
 
 /**
+ * Map Prowlarr event type to template ID
+ * @param eventType Event type from webhook payload
+ * @returns Template ID for the event type, or null if not found
+ */
+function getTemplateIdForEventType(eventType: string): string | null {
+  const templateMap: Record<string, string> = {
+    Grab: 'prowlarr-grab',
+    IndexerStatusChange: 'prowlarr-indexerstatuschange',
+    IndexerUpdate: 'prowlarr-indexerupdate',
+    IndexerDelete: 'prowlarr-indexerdelete',
+    IndexerAdded: 'prowlarr-indexeradded',
+  }
+  return templateMap[eventType] ?? null
+}
+
+/**
  * Handle Prowlarr webhook POST requests
  * Processes indexer status change/update notifications and sends email using template system
  * @param req Next.js request object
@@ -31,9 +47,16 @@ export const POST = api(async (req: NextRequest) => {
 
   const variables = await prepareProwlarrTemplateVariables(payload)
 
-  const template = getTemplate('prowlarr-default')
+  // Map event type to template ID
+  const templateId = getTemplateIdForEventType(payload.eventType)
+  if (!templateId) {
+    fail(`Template ID not found for event type: ${payload.eventType}`)
+    return jsonInvalidParameters('template not found')
+  }
+
+  const template = getTemplate(templateId)
   if (!template) {
-    fail('Template not found: prowlarr-default')
+    fail(`Template not found: ${templateId}`)
     return jsonInvalidParameters('template not found')
   }
 
