@@ -75,9 +75,6 @@ declare namespace NodeJS {
     /** Used for cron job authentication, separate from API_SECRET */
     CRON_SECRET?: string
 
-    /** Custom base URL for the application (e.g., "https://example.com" or "example.com") */
-    APP_BASE_URL?: string
-
     /** Douban RSS URL for syncing movie list to TMDB favorites */
     DOUBAN_RSS_URL?: string
   }

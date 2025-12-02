@@ -55,6 +55,7 @@ export function standardResponse(init?: StandardResponseInit) {
     },
   })
 }
+
 export function isStandardResponse(data: any): data is StandardResponse {
   return data && typeof data === 'object' && typeof data.code === 'number' && typeof data.message === 'string'
 }

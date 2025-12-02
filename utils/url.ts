@@ -3,25 +3,14 @@ import type { NextRequest } from 'next/server'
 /**
  * Get base URL for the application
  * Priority:
- * 1. Custom domain from APP_BASE_URL environment variable (if set)
- * 2. Request origin (if not localhost/127.0.0.1)
- * 3. VERCEL_URL environment variable (for localhost/127.0.0.1)
- * 4. Request origin (fallback)
+ * 1. Request origin (if provided and not localhost/127.0.0.1)
+ * 2. VERCEL_URL environment variable (for localhost/127.0.0.1 or when request is not available)
+ * 3. Request origin (fallback)
  *
  * @param req Next.js request object (optional, for server-side usage)
  * @returns Base URL (e.g., "https://example.com")
  */
 export function getBaseUrl(req?: NextRequest): string {
-  // Priority 1: Custom domain from environment variable
-  const appBaseUrl = process.env.APP_BASE_URL
-  if (appBaseUrl) {
-    // Ensure it has protocol
-    if (appBaseUrl.startsWith('http://') || appBaseUrl.startsWith('https://')) {
-      return appBaseUrl.replace(/\/$/, '') // Remove trailing slash
-    }
-    return `https://${appBaseUrl.replace(/\/$/, '')}`
-  }
-
   // If request is provided, use it to determine origin
   if (req) {
     const url = new URL(req.url)
