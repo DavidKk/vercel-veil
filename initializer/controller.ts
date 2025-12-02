@@ -93,7 +93,7 @@ export function buffer<P>(handle: (req: NextRequest, context: ContextWithParams<
 
 /**
  * Cron job handler wrapper
- * Supports CRON_SECRET (Bearer token) or webhook authentication (API_TOKEN_SECRET + Basic Auth)
+ * Supports CRON_SECRET (Bearer token) or webhook authentication (API_SECRET + Basic Auth)
  * Internally uses `api` to avoid code duplication
  * @param handle Handler function that processes the cron job
  * @returns Next.js route handler

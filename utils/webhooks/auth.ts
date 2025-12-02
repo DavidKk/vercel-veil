@@ -3,11 +3,34 @@ import type { NextRequest } from 'next/server'
 import { jsonUnauthorized } from '@/initializer/response'
 import { validateCookie } from '@/services/auth/access'
 
+// ============================================
+// Constants
+// ============================================
+
 export const TOKEN_HEADER_NAME = process.env.API_TOKEN_HEADER ?? 'x-vv-token'
-const TOKEN_SECRET = process.env.API_TOKEN_SECRET
+const TOKEN_SECRET = process.env.API_SECRET
 const CRON_SECRET = process.env.CRON_SECRET
 const API_USERNAME = process.env.API_USERNAME
 const API_PASSWORD = process.env.API_PASSWORD
+
+// ============================================
+// Utility Functions
+// ============================================
+
+/**
+ * Get header value (case-insensitive)
+ * @param headers Headers object
+ * @param name Header name
+ * @returns Header value or null
+ */
+export function getHeader(headers: Headers, name: string): string | null {
+  const normalized = name.toLowerCase()
+  return headers.get(name) ?? headers.get(normalized) ?? headers.get(normalized.toUpperCase())
+}
+
+// ============================================
+// Basic Auth Helper Functions
+// ============================================
 
 /**
  * Extract username and password from HTTP Basic Authentication header
@@ -44,19 +67,24 @@ function verifyCredentials(username: string, password: string): boolean {
 }
 
 /**
- * Ensure authorization via cookie (for internal API calls)
- * @returns true if authenticated via cookie
+ * Check authorization via Basic Auth (username/password)
+ * @param req Next.js request object
+ * @returns true if authenticated via Basic Auth
  */
-async function checkCookieAuth(): Promise<boolean> {
-  try {
-    return await validateCookie()
-  } catch {
+function checkBasicAuth(req: NextRequest): boolean {
+  const credentials = extractBasicAuth(req)
+  if (!credentials) {
     return false
   }
+  return verifyCredentials(credentials.username, credentials.password)
 }
 
+// ============================================
+// Token Auth Helper Functions
+// ============================================
+
 /**
- * Ensure authorization via header token
+ * Check authorization via header token
  * @param req Next.js request object
  * @returns true if authenticated via header token
  */
@@ -69,18 +97,48 @@ function checkTokenAuth(req: NextRequest): boolean {
   return token === TOKEN_SECRET
 }
 
+// ============================================
+// Cookie Auth Helper Functions
+// ============================================
+
 /**
- * Ensure authorization via Basic Auth (username/password)
- * @param req Next.js request object
- * @returns true if authenticated via Basic Auth
+ * Check authorization via cookie (for internal API calls)
+ * @returns true if authenticated via cookie
  */
-function checkBasicAuth(req: NextRequest): boolean {
-  const credentials = extractBasicAuth(req)
-  if (!credentials) {
+async function checkCookieAuth(): Promise<boolean> {
+  try {
+    return await validateCookie()
+  } catch {
     return false
   }
-  return verifyCredentials(credentials.username, credentials.password)
 }
+
+// ============================================
+// Cron Secret Auth Helper Functions
+// ============================================
+
+/**
+ * Check authorization via CRON_SECRET (Bearer token)
+ * @param req Next.js request object
+ * @returns true if authenticated via CRON_SECRET
+ */
+function checkCronSecretAuth(req: NextRequest): boolean {
+  if (!CRON_SECRET) {
+    return false
+  }
+
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false
+  }
+
+  const token = authHeader.substring(7)
+  return token === CRON_SECRET
+}
+
+// ============================================
+// Public Authorization Functions
+// ============================================
 
 /**
  * Ensure authorization for API routes
@@ -146,25 +204,6 @@ export async function ensureProwlarrAuthorized(req: NextRequest) {
 }
 
 /**
- * Check authorization via CRON_SECRET (Bearer token)
- * @param req Next.js request object
- * @returns true if authenticated via CRON_SECRET
- */
-function checkCronSecretAuth(req: NextRequest): boolean {
-  if (!CRON_SECRET) {
-    return false
-  }
-
-  const authHeader = req.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false
-  }
-
-  const token = authHeader.substring(7)
-  return token === CRON_SECRET
-}
-
-/**
  * Ensure authorization for cron jobs
  * Only supports CRON_SECRET (Bearer token) authentication
  * @param req Next.js request object
@@ -176,22 +215,21 @@ export async function ensureCronAuthorized(req: NextRequest) {
   }
 }
 
+// ============================================
+// Deprecated Functions
+// ============================================
+
 /**
  * Legacy function for backward compatibility
  * @deprecated Use ensureApiAuthorized, ensureWebhookAuthorized, or ensureProwlarrAuthorized instead
  */
 export function ensureAuthorized(req: NextRequest) {
   if (!TOKEN_SECRET) {
-    throw new Error('API_TOKEN_SECRET is not configured in environment variables')
+    throw new Error('API_SECRET is not configured in environment variables')
   }
 
   const token = getHeader(req.headers, TOKEN_HEADER_NAME)
   if (!token || token !== TOKEN_SECRET) {
     throw jsonUnauthorized('token mismatch')
   }
-}
-
-export function getHeader(headers: Headers, name: string): string | null {
-  const normalized = name.toLowerCase()
-  return headers.get(name) ?? headers.get(normalized) ?? headers.get(normalized.toUpperCase())
 }

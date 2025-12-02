@@ -22,8 +22,8 @@ declare namespace NodeJS {
     /** API authentication configuration */
     /** API header name for token (used by third-party callers, default "x-vv-token") */
     API_TOKEN_HEADER?: string
-    /** API header token value (must match the token sent by third-party callers) */
-    API_TOKEN_SECRET?: string
+    /** API secret token value (must match the token sent by third-party callers) */
+    API_SECRET?: string
     /** API username for Basic Authentication */
     API_USERNAME?: string
     /** API password for Basic Authentication */
@@ -72,7 +72,7 @@ declare namespace NodeJS {
     CACHE?: string
 
     /** Cron job secret for authorization (Bearer token in Authorization header) */
-    /** Used for cron job authentication, separate from API_TOKEN_SECRET */
+    /** Used for cron job authentication, separate from API_SECRET */
     CRON_SECRET?: string
 
     /** Custom base URL for the application (e.g., "https://example.com" or "example.com") */
