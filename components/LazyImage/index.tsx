@@ -20,23 +20,62 @@ export interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement
   }
 }
 
-export default function LazyImage({ src, alt, className = '', loading = 'lazy', forceLoad, placeholderProps, ...props }: LazyImageProps) {
+export default function LazyImage({ src, alt, className = '', forceLoad, placeholderProps, ...props }: LazyImageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
+  const [shouldLoad, setShouldLoad] = useState(forceLoad || false)
   const imgRef = useRef<HTMLImageElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Use native loading="lazy" with content-visibility for efficient lazy loading
-  const effectiveLoading = forceLoad ? 'eager' : loading
+  // Use IntersectionObserver to detect when image enters viewport (with expanded range)
+  useEffect(() => {
+    // If forceLoad is true, skip IntersectionObserver
+    if (forceLoad) {
+      setShouldLoad(true)
+      return
+    }
+
+    const container = containerRef.current
+    if (!container) return
+
+    // Create IntersectionObserver with rootMargin to load next screen
+    // 0% 0% 100% 0% = expand 100% viewport height downward (top, right, bottom, left)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setShouldLoad(true)
+            // Once loaded, we can disconnect the observer
+            observer.disconnect()
+          }
+        })
+      },
+      {
+        rootMargin: '0% 0% 100% 0%', // Expand loading range to include next screen (100% viewport height downward)
+        threshold: 0.01, // Trigger when any part of the element is visible
+      }
+    )
+
+    observer.observe(container)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [forceLoad])
 
   // Reset loading state when src changes
   useEffect(() => {
-    setIsLoading(true)
-    setHasError(false)
-  }, [src])
+    if (shouldLoad) {
+      setIsLoading(true)
+      setHasError(false)
+    }
+  }, [src, shouldLoad])
 
   // Check if image is already loaded (cached or loaded before onLoad fires)
   useEffect(() => {
+    if (!shouldLoad) return
+
     // Use requestAnimationFrame to ensure DOM is ready
     const checkImageStatus = () => {
       const img = imgRef.current
@@ -65,7 +104,7 @@ export default function LazyImage({ src, alt, className = '', loading = 'lazy', 
     return () => {
       cancelAnimationFrame(rafId)
     }
-  }, [src, retryKey])
+  }, [src, retryKey, shouldLoad])
 
   const handleLoad = () => {
     setIsLoading(false)
@@ -83,22 +122,25 @@ export default function LazyImage({ src, alt, className = '', loading = 'lazy', 
     setRetryKey((prev) => prev + 1)
   }
 
+  // Only set src when shouldLoad is true
+  const imageSrc = shouldLoad ? src : undefined
+
   return (
-    <div className="relative w-full h-full" style={{ contentVisibility: forceLoad ? 'visible' : 'auto' }}>
+    <div ref={containerRef} className="relative w-full h-full" style={{ contentVisibility: forceLoad ? 'visible' : 'auto' }}>
       {/* Spinner - always rendered, controlled by opacity */}
       <div
         className="absolute inset-0 bg-gray-200 flex items-center justify-center z-10"
         style={{
-          opacity: isLoading ? 1 : 0,
+          opacity: isLoading && shouldLoad ? 1 : 0,
           transition: 'opacity 0.3s ease-out',
-          pointerEvents: isLoading ? 'auto' : 'none',
+          pointerEvents: isLoading && shouldLoad ? 'auto' : 'none',
         }}
       >
         <Spinner color="text-indigo-600" size="h-6 w-6" />
       </div>
 
       {/* Error placeholder - shown when image fails to load */}
-      {hasError && (
+      {hasError && shouldLoad && (
         <div
           className="absolute inset-0 flex items-center justify-center z-20 cursor-pointer hover:opacity-90 transition-opacity"
           onClick={handleRetry}
@@ -111,22 +153,23 @@ export default function LazyImage({ src, alt, className = '', loading = 'lazy', 
         </div>
       )}
 
-      {/* Image - always rendered, controlled by opacity */}
-      <img
-        ref={imgRef}
-        key={retryKey}
-        src={src}
-        alt={alt}
-        className={className}
-        loading={effectiveLoading}
-        onLoad={handleLoad}
-        onError={handleError}
-        style={{
-          opacity: isLoading || hasError ? 0 : 1,
-          transition: 'opacity 0.2s ease-in, transform 160ms ease-in',
-        }}
-        {...props}
-      />
+      {/* Image - only render when shouldLoad is true */}
+      {shouldLoad && (
+        <img
+          ref={imgRef}
+          key={retryKey}
+          src={imageSrc}
+          alt={alt}
+          className={className}
+          onLoad={handleLoad}
+          onError={handleError}
+          style={{
+            opacity: isLoading || hasError ? 0 : 1,
+            transition: 'opacity 0.2s ease-in, transform 160ms ease-in',
+          }}
+          {...props}
+        />
+      )}
     </div>
   )
 }
