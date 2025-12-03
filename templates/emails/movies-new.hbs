@@ -155,6 +155,26 @@
         font-size: 11px;
         font-weight: 600;
       }
+      .movie-tag-link {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: opacity 0.2s;
+      }
+      .movie-tag-link:hover {
+        opacity: 0.8;
+      }
+      .movie-tag-tmdb {
+        background: #01d277;
+        color: #fff;
+      }
+      .movie-tag-maoyan {
+        background: #ff6b35;
+        color: #fff;
+      }
       .cta-button {
         display: inline-block;
         margin-top: 24px;
@@ -238,6 +258,14 @@
                   <span class="movie-tag movie-tag-year">{{year}}</span>
                   {{/if}} {{#if score}}
                   <span class="movie-tag movie-score">{{score}}</span>
+                  {{/if}}
+                </div>
+                <div class="movie-tags" style="margin-top: 6px;">
+                  {{#if tmdbUrl}}
+                  <a href="{{!tmdbUrl}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-tmdb">TMDB</a>
+                  {{/if}}
+                  {{#if maoyanUrl}}
+                  <a href="{{!maoyanUrl}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-maoyan">猫眼</a>
                   {{/if}}
                 </div>
                 {{#if releaseDate}}

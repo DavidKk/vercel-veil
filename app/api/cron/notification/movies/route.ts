@@ -51,6 +51,8 @@ export const GET = cron(async (req: NextRequest) => {
     year: movie.year || null,
     score: movie.score || null,
     releaseDate: movie.releaseDate || null,
+    maoyanUrl: movie.maoyanUrl || null,
+    tmdbUrl: movie.tmdbUrl || null,
   }))
 
   const templateVariables: Record<string, string> = {
