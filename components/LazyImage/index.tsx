@@ -123,7 +123,7 @@ export default function LazyImage({ src, alt, className = '', loading = 'lazy', 
         onError={handleError}
         style={{
           opacity: isLoading || hasError ? 0 : 1,
-          transition: 'opacity 0.3s ease-in',
+          transition: 'opacity 0.2s ease-in, transform 160ms ease-in',
         }}
         {...props}
       />
