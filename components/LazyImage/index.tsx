@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Spinner } from '../Spinner'
 import PosterPlaceholder from './PosterPlaceholder'
@@ -24,9 +24,53 @@ export default function LazyImage({ src, alt, className = '', loading = 'lazy', 
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   // Use native loading="lazy" with content-visibility for efficient lazy loading
   const effectiveLoading = forceLoad ? 'eager' : loading
+
+  // Reset loading state when src changes
+  useEffect(() => {
+    setIsLoading(true)
+    setHasError(false)
+  }, [src])
+
+  // Check if image is already loaded (cached or loaded before onLoad fires)
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is ready
+    const checkImageStatus = () => {
+      const img = imgRef.current
+      if (!img) return
+
+      // Check if image is already complete (cached or loaded very quickly)
+      if (img.complete) {
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          // Image loaded successfully
+          setIsLoading(false)
+          setHasError(false)
+        } else {
+          // Image complete but has no dimensions - likely an error
+          setIsLoading(false)
+          setHasError(true)
+        }
+      }
+    }
+
+    // Check immediately and also on next frame to catch fast loads
+    checkImageStatus()
+    const rafId = requestAnimationFrame(() => {
+      checkImageStatus()
+    })
+
+    return () => {
+      cancelAnimationFrame(rafId)
+    }
+  }, [src, retryKey])
+
+  const handleLoad = () => {
+    setIsLoading(false)
+    setHasError(false)
+  }
 
   const handleError = () => {
     setIsLoading(false)
@@ -69,15 +113,13 @@ export default function LazyImage({ src, alt, className = '', loading = 'lazy', 
 
       {/* Image - always rendered, controlled by opacity */}
       <img
+        ref={imgRef}
         key={retryKey}
         src={src}
         alt={alt}
         className={className}
         loading={effectiveLoading}
-        onLoad={() => {
-          setIsLoading(false)
-          setHasError(false)
-        }}
+        onLoad={handleLoad}
         onError={handleError}
         style={{
           opacity: isLoading || hasError ? 0 : 1,
