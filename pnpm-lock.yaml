@@ -32,6 +32,9 @@ importers:
       feather-icons-react:
         specifier: ^0.8.1
         version: 0.8.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      handlebars:
+        specifier: ^4.7.8
+        version: 4.7.8
       htmlparser2:
         specifier: ^10.0.0
         version: 10.0.0
@@ -72,6 +75,9 @@ importers:
       '@types/chalk':
         specifier: ^2.2.0
         version: 2.2.4
+      '@types/handlebars':
+        specifier: ^4.1.0
+        version: 4.1.0
       '@types/jest':
         specifier: ^29.5.12
         version: 29.5.14
@@ -1160,6 +1166,10 @@ packages:
 
   '@types/graceful-fs@4.1.9':
     resolution: {integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==}
+
+  '@types/handlebars@4.1.0':
+    resolution: {integrity: sha512-gq9YweFKNNB1uFK71eRqsd4niVkXrxHugqWFQkeLRJvGjnxsLr16bYtcsG4tOFwmYi0Bax+wCkbf1reUfdl4kA==}
+    deprecated: This is a stub types definition. handlebars provides its own type definitions, so you do not need this installed.
 
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
@@ -5669,6 +5679,10 @@ snapshots:
   '@types/graceful-fs@4.1.9':
     dependencies:
       '@types/node': 20.19.25
+
+  '@types/handlebars@4.1.0':
+    dependencies:
+      handlebars: 4.7.8
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 

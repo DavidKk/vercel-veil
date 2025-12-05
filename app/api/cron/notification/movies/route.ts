@@ -64,6 +64,24 @@ export const GET = cron(async (req: NextRequest) => {
     currentDate,
   }
 
+  // Log template variables for debugging
+  info('Template variables:', {
+    newMoviesCount: templateVariables.newMoviesCount,
+    isPlural: templateVariables.isPlural,
+    moviesCount: moviesForTemplate.length,
+    sampleMovie: moviesForTemplate[0]
+      ? {
+          name: moviesForTemplate[0].name,
+          year: moviesForTemplate[0].year,
+          score: moviesForTemplate[0].score,
+          genres: moviesForTemplate[0].genres,
+          hasGenres: !!moviesForTemplate[0].genres && moviesForTemplate[0].genres.length > 0,
+        }
+      : null,
+    shareUrl: templateVariables.shareUrl,
+    currentDate: templateVariables.currentDate,
+  })
+
   // Render email HTML
   const html = renderTemplate(template.html, templateVariables)
 

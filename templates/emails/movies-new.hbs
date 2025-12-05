@@ -253,7 +253,7 @@
             {{#each newMoviesJSON}}
             <div class="movie-item">
               <div class="movie-poster">
-                <img src="{{!poster}}" alt="{{name}}" />
+                <img src="{{{poster}}}" alt="{{name}}" />
               </div>
               <div class="movie-info">
                 <p class="movie-title">{{name}}</p>
@@ -273,10 +273,10 @@
                 {{/if}}
                 <div class="movie-tags" style="margin-top: 6px;">
                   {{#if tmdbUrl}}
-                  <a href="{{!tmdbUrl}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-tmdb">TMDB</a>
+                  <a href="{{{tmdbUrl}}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-tmdb">TMDB</a>
                   {{/if}}
                   {{#if maoyanUrl}}
-                  <a href="{{!maoyanUrl}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-maoyan">猫眼</a>
+                  <a href="{{{maoyanUrl}}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-maoyan">猫眼</a>
                   {{/if}}
                 </div>
                 {{#if releaseDate}}
