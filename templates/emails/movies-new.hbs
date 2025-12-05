@@ -175,6 +175,10 @@
         background: #ff6b35;
         color: #fff;
       }
+      .movie-tag-genre {
+        background: #e0e7ff;
+        color: #4338ca;
+      }
       .cta-button {
         display: inline-block;
         margin-top: 24px;
@@ -229,13 +233,13 @@
             <p style="margin: 0; text-transform: uppercase; letter-spacing: 0.2em; color: #10b981; font-size: 12px">Movies</p>
             <h1 style="margin: 4px 0; font-size: 24px; color: #111827">New Movies Update</h1>
           </div>
-          <span class="badge">{{newMoviesCount}} New Movie{{#if newMoviesCount}}s{{/if}}</span>
+          <span class="badge">{{newMoviesCount}} New Movie{{#if isPlural}}s{{/if}}</span>
         </div>
 
         <div class="info-grid">
           <div class="info-item">
             <span>New Count</span>
-            <strong>{{newMoviesCount}} Movie{{#if newMoviesCount}}s{{/if}}</strong>
+            <strong>{{newMoviesCount}} Movie{{#if isPlural}}s{{/if}}</strong>
           </div>
           <div class="info-item">
             <span>Update Date</span>
@@ -260,6 +264,13 @@
                   <span class="movie-tag movie-score">{{score}}</span>
                   {{/if}}
                 </div>
+                {{#if genres}}
+                <div class="movie-tags" style="margin-top: 4px;">
+                  {{#each genres}}
+                  <span class="movie-tag movie-tag-genre">{{this}}</span>
+                  {{/each}}
+                </div>
+                {{/if}}
                 <div class="movie-tags" style="margin-top: 6px;">
                   {{#if tmdbUrl}}
                   <a href="{{!tmdbUrl}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-tmdb">TMDB</a>

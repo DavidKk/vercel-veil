@@ -9,7 +9,6 @@ import { isStandardResponse, standardResponseError, stringifyUnknownError } from
 
 export interface Context {
   params: Promise<any>
-  searchParams: URLSearchParams
 }
 
 export interface ContextWithParams<P> extends Context {
@@ -17,7 +16,7 @@ export interface ContextWithParams<P> extends Context {
 }
 
 export function api<P>(handle: (req: NextRequest, context: ContextWithParams<P>) => Promise<Record<string, any>>) {
-  return async (req: NextRequest, context: Context) => {
+  return async (req: NextRequest, context: { params: Promise<any> }) => {
     return runWithContext(req, async () => {
       try {
         const result = await handle(req, context)
@@ -53,7 +52,7 @@ export function api<P>(handle: (req: NextRequest, context: ContextWithParams<P>)
 }
 
 export function plainText<P>(handle: (req: NextRequest, context: ContextWithParams<P>) => Promise<string | NextResponse>) {
-  return async (req: NextRequest, context: ContextWithParams<P>) => {
+  return async (req: NextRequest, context: { params: Promise<any> }) => {
     return runWithContext(req, async () => {
       try {
         const result = await handle(req, context)
@@ -73,7 +72,7 @@ export function plainText<P>(handle: (req: NextRequest, context: ContextWithPara
 }
 
 export function buffer<P>(handle: (req: NextRequest, context: ContextWithParams<P>) => Promise<ArrayBuffer | NextResponse>) {
-  return async (req: NextRequest, context: ContextWithParams<P>) => {
+  return async (req: NextRequest, context: { params: Promise<any> }) => {
     return runWithContext(req, async () => {
       try {
         const result = await handle(req, context)

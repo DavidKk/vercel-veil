@@ -37,6 +37,29 @@ export function renderTemplate(html: string, variables: Record<string, string>) 
         .map((item: any) => {
           let itemHtml = template
 
+          // Handle nested {{#each}} loops within item (e.g., genres array)
+          const nestedEachRegex = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g
+          itemHtml = itemHtml.replace(nestedEachRegex, (match: string, arrayKey: string, nestedTemplate: string) => {
+            const nestedArray = item[arrayKey]
+            if (!Array.isArray(nestedArray) || nestedArray.length === 0) {
+              return ''
+            }
+            return nestedArray
+              .map((nestedItem: any) => {
+                let nestedHtml = nestedTemplate
+                // Handle {{this}} in nested loops
+                nestedHtml = nestedHtml.replace(/\{\{this\}\}/g, () => {
+                  return String(nestedItem).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+                })
+                // Handle {{!this}} in nested loops (unescaped)
+                nestedHtml = nestedHtml.replace(/\{\{!this\}\}/g, () => {
+                  return String(nestedItem)
+                })
+                return nestedHtml
+              })
+              .join('')
+          })
+
           // Handle {{#if key}}...{{/if}} conditionals within loop
           itemHtml = processConditionals(itemHtml, item)
 
