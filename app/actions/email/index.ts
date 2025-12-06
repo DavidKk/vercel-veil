@@ -5,6 +5,9 @@ import { debug, fail, info } from '@/services/logger'
 import { getMoviesFromGist, getNewMoviesFromCache } from '@/services/movies'
 import { sendEmail } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
+import { generateShareToken } from '@/utils/jwt'
+
+import { buildMoviesForTemplate } from './utils'
 
 function requireEnv(key: string) {
   const value = process.env[key]
@@ -32,26 +35,14 @@ async function getRealMoviesDataForPreview(): Promise<Record<string, string> | n
     const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:3000'
     const currentDate = new Date().toISOString().split('T')[0]
 
+    // Generate a single real share token for preview (same as production)
+    const previewShareToken = generateShareToken('movie-share', '1d')
+
     // Prepare movies data for template (limit to 6 for preview)
-    const moviesForTemplate = newMovies.slice(0, 6).map((movie) => {
-      // Build detail page URL - prefer tmdbId, fallback to maoyanId
-      const detailUrl = movie.tmdbId ? `${baseUrl}/movies/${movie.tmdbId}` : `${baseUrl}/movies/${movie.maoyanId}`
+    const moviesForTemplate = buildMoviesForTemplate(newMovies, previewShareToken, baseUrl, 6)
 
-      return {
-        poster: movie.tmdbPoster || movie.poster || 'https://via.placeholder.com/80x120?text=No+Image',
-        name: movie.name || 'Unknown',
-        year: movie.year || null,
-        score: movie.score || null,
-        releaseDate: movie.releaseDate || null,
-        genres: movie.genres && movie.genres.length > 0 ? movie.genres : null,
-        maoyanUrl: movie.maoyanUrl || null,
-        tmdbUrl: movie.tmdbUrl || null,
-        detailUrl,
-      }
-    })
-
-    // Generate share URL for preview (use a dummy token)
-    const shareUrl = `${baseUrl}/movies/share/preview-token`
+    // Generate share URL
+    const shareUrl = `${baseUrl}/movies/share/${previewShareToken}`
 
     return {
       newMoviesCount: String(newMovies.length),

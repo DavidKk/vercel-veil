@@ -34,7 +34,7 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
   })
 
   const sourceBadgeText = getSourceBadgeText(movie)
-  const detailUrl = getMovieDetailUrl(movie)
+  const detailUrl = getMovieDetailUrl(movie, shareToken)
   const releaseInfo = getReleaseInfo(movie)
 
   return (

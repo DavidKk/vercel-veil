@@ -42,9 +42,14 @@ export function getReleaseInfo(movie: MergedMovie): { isReleased: boolean; forma
 
 /**
  * Get detail page URL - prefer tmdbId, fallback to maoyanId
+ * If shareToken is provided, use share detail page URL
  */
-export function getMovieDetailUrl(movie: MergedMovie): string {
-  return movie.tmdbId ? `/movies/${movie.tmdbId}` : `/movies/${movie.maoyanId}`
+export function getMovieDetailUrl(movie: MergedMovie, shareToken?: string): string {
+  const movieId = movie.tmdbId ? String(movie.tmdbId) : String(movie.maoyanId)
+  if (shareToken) {
+    return `/movies/share/${shareToken}/${movieId}`
+  }
+  return `/movies/${movieId}`
 }
 
 /**

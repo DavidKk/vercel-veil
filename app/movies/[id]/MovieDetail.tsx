@@ -17,9 +17,10 @@ interface MovieDetailProps {
   movie: MergedMovie
   favoriteAvailable: boolean
   favoriteIds: Set<number>
+  shareToken?: string
 }
 
-export default function MovieDetail({ movie, favoriteAvailable, favoriteIds }: MovieDetailProps) {
+export default function MovieDetail({ movie, favoriteAvailable, favoriteIds, shareToken }: MovieDetailProps) {
   const posterUrl = movie.tmdbPoster || movie.poster
   const alertRef = useRef<AlertImperativeHandler>(null)
 
@@ -27,6 +28,7 @@ export default function MovieDetail({ movie, favoriteAvailable, favoriteIds }: M
     initialIsFavorited: movie.tmdbId ? favoriteIds.has(movie.tmdbId) : false,
     movieId: movie.tmdbId,
     favoriteAvailable,
+    shareToken,
     alertRef,
   })
 
