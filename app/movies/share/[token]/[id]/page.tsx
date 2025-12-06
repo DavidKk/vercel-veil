@@ -25,8 +25,8 @@ export default async function MovieShareDetailPage(props: MovieShareDetailPagePr
     return <ShareTokenError error={verification.error} />
   }
 
-  // Fetch movie data first (required)
-  const movie = await getMovieById(id)
+  // Fetch movie data first (required) - skip auth check for share pages
+  const movie = await getMovieById(id, true)
 
   if (!movie) {
     notFound()

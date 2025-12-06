@@ -1,5 +1,5 @@
+import { getMoviesListFromCacheForShare } from '@/app/actions/movies'
 import { verifyShareToken } from '@/app/actions/movies/share'
-import { getMergedMoviesList } from '@/services/maoyan'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 import { isMobileDevice } from '@/utils/device'
 
@@ -26,9 +26,10 @@ export default async function MoviesSharePage(props: SharePageProps) {
   }
 
   // Fetch data (no authentication required for share page, but we still need to check if feature is available)
+  // Use cache to avoid unnecessary API requests
   const favoriteAvailable = hasTmdbAuth()
   const [movies, favoriteIds, initialIsMobile] = await Promise.all([
-    getMergedMoviesList().catch(() => []), // Allow to fail gracefully
+    getMoviesListFromCacheForShare(true).catch(() => []), // Allow to fail gracefully, skip auth for share pages
     getFavoriteIdsForShare(),
     isMobileDevice(),
   ])

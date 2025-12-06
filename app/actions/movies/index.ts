@@ -147,15 +147,36 @@ export async function getFavoriteMovieIds(): Promise<number[]> {
 }
 
 /**
+ * Get movies list from cache only (Server Action)
+ * This function only reads from cache, never triggers updates or TMDB requests
+ * @param skipAuth If true, skip authentication check (for share pages)
+ * @returns Movies list from cache, or empty array if cache not available
+ */
+export async function getMoviesListFromCacheForShare(skipAuth = false): Promise<MergedMovie[]> {
+  // Authentication check (can be skipped for share pages)
+  if (!skipAuth && !(await validateCookie())) {
+    fail('Unauthorized access to movies list')
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    return await getMoviesListFromCache()
+  } catch (error) {
+    fail('getMoviesListFromCacheForShare - Error:', error)
+    throw error
+  }
+}
+
+/**
  * Get a single movie by ID from cache only (Server Action)
- * Internal use only, requires authentication
  * This function only reads from cache, never triggers updates or TMDB requests
  * @param id Movie ID (can be tmdbId as number or maoyanId as string)
+ * @param skipAuth If true, skip authentication check (for share pages)
  * @returns Movie data or null if not found
  */
-export async function getMovieById(id: string | number): Promise<MergedMovie | null> {
-  // Authentication errors should be thrown immediately
-  if (!(await validateCookie())) {
+export async function getMovieById(id: string | number, skipAuth = false): Promise<MergedMovie | null> {
+  // Authentication check (can be skipped for share pages)
+  if (!skipAuth && !(await validateCookie())) {
     fail('Unauthorized access to movie details')
     throw new Error('Unauthorized')
   }
