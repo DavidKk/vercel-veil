@@ -6,6 +6,7 @@ import ClearableSelect from '@/components/ClearableSelect'
 import type { Anime } from '@/services/anilist/types'
 
 import AnimeCard from './AnimeCard'
+import { filterAnimeWithScoreOrPopularity } from './utils/animeHelpers'
 
 type SortOption = 'score' | 'popularity' | 'trending' | ''
 
@@ -20,13 +21,7 @@ export default function AnimeList({ anime, favoriteAvailable, favoriteIds, share
   const [sortBy, setSortBy] = useState<SortOption>('')
 
   // Filter anime: only keep those with score or popularity data
-  const filteredAnime = useMemo(() => {
-    return anime.filter((item) => {
-      const hasScore = item.averageScore !== undefined && item.averageScore > 0
-      const hasPopularity = item.popularity !== undefined && item.popularity > 0
-      return hasScore || hasPopularity
-    })
-  }, [anime])
+  const filteredAnime = useMemo(() => filterAnimeWithScoreOrPopularity(anime), [anime])
 
   // Sort anime based on selected option
   const sortedAnime = useMemo(() => {
@@ -56,8 +51,8 @@ export default function AnimeList({ anime, favoriteAvailable, favoriteIds, share
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-900">No anime available</p>
-          <p className="mt-2 text-sm text-gray-600">Please try again later</p>
+          <p className="text-lg font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">No anime available</p>
+          <p className="mt-2 text-sm text-gray-500">Please try again later</p>
         </div>
       </div>
     )
@@ -67,14 +62,14 @@ export default function AnimeList({ anime, favoriteAvailable, favoriteIds, share
   return (
     <div className="space-y-6">
       {/* Sort Controls - Sticky */}
-      <div className="hidden md:block sticky top-2 z-10">
-        <div className="rounded-xl border border-gray-200/80 bg-white/95 backdrop-blur-md px-4 py-3 shadow-md ring-1 ring-gray-200/50">
+      <div className="hidden lg:block sticky top-20 z-10">
+        <div className="rounded-2xl border-2 border-pink-300 bg-white px-4 py-3 shadow-md">
           <div className="flex items-center justify-between">
-            <div className="hidden sm:block text-sm text-gray-600">
-              Showing <span className="font-semibold text-gray-900">{sortedAnime.length}</span> anime
+            <div className="hidden sm:block text-sm font-bold text-gray-700">
+              <span className="text-pink-500">{sortedAnime.length}</span> anime
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start">
-              <label htmlFor="sort-select" className="text-sm font-medium text-gray-700">
+              <label htmlFor="sort-select" className="text-sm font-bold text-gray-700">
                 Sort by:
               </label>
               <ClearableSelect
@@ -94,7 +89,7 @@ export default function AnimeList({ anime, favoriteAvailable, favoriteIds, share
       </div>
 
       {/* Anime Masonry Layout - Desktop only */}
-      <div className="columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4">
+      <div className="columns-1 gap-4 lg:columns-3 2xl:columns-4">
         {sortedAnime.map((item) => {
           const isFavorited = item.tmdbId ? favoriteIds.has(item.tmdbId) : false
           return (

@@ -2,7 +2,7 @@
 
 import type { GetMergedAnimeListOptions } from '@/services/anilist'
 import type { Anime } from '@/services/anilist/types'
-import { getAnimeListWithAutoUpdate } from '@/services/anime'
+import { getAnimeListFromCache, getAnimeListWithAutoUpdate } from '@/services/anime'
 import { validateCookie } from '@/services/auth/access'
 import { fail } from '@/services/logger'
 import { addTVToFavorites, getFavoriteTVs } from '@/services/tmdb'
@@ -103,5 +103,46 @@ export async function isFavoriteFeatureAvailable(): Promise<boolean> {
   } catch (error) {
     fail('isFavoriteFeatureAvailable - Error:', error)
     return false
+  }
+}
+
+/**
+ * Get a single anime by ID from cache only (Server Action)
+ * Internal use only, requires authentication
+ * This function only reads from cache, never triggers updates or external API calls
+ * @param id Anime ID (can be anilistId as number or tmdbId as number)
+ * @returns Anime data or null if not found
+ */
+export async function getAnimeById(id: string | number): Promise<Anime | null> {
+  // Authentication errors should be thrown immediately
+  if (!(await validateCookie())) {
+    fail('Unauthorized access to anime details')
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    // Get all anime from cache only (read-only, no update)
+    // This avoids triggering external API requests when accessing detail pages
+    const animeList = await getAnimeListFromCache()
+
+    // Try to find by anilistId first (if id is a number)
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id
+    if (!isNaN(numericId)) {
+      const animeByAnilistId = animeList.find((a) => a.anilistId === numericId)
+      if (animeByAnilistId) {
+        return animeByAnilistId
+      }
+
+      // Try to find by tmdbId
+      const animeByTmdbId = animeList.find((a) => a.tmdbId === numericId)
+      if (animeByTmdbId) {
+        return animeByTmdbId
+      }
+    }
+
+    return null
+  } catch (error) {
+    fail('getAnimeById - Error:', error)
+    throw error
   }
 }

@@ -1,0 +1,7 @@
+export { default as AniListBadge } from './AniListBadge'
+export { default as AnimeBadge } from './AnimeBadge'
+export { default as AnimeGenreBadge } from './AnimeGenreBadge'
+export { default as AnimeScoreBadge } from './AnimeScoreBadge'
+export { default as AnimeYearBadge } from './AnimeYearBadge'
+export { default as EpisodesBadge } from './EpisodesBadge'
+export { default as PopularityBadge } from './PopularityBadge'

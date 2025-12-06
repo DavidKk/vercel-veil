@@ -25,11 +25,11 @@ export default async function MoviesSharePage(props: SharePageProps) {
     // In Next.js App Router, we can't directly set status code in page components,
     // but we can show the error message
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">401 Unauthorized</h1>
-          <p className="mt-2 text-gray-600">{verification.error === 'Token expired' ? 'This share link has expired (valid for 1 day)' : 'Invalid or expired share link'}</p>
-          <p className="mt-4 text-sm text-gray-500">Please request a new share link from the owner.</p>
+          <h1 className="text-2xl font-bold text-white">401 Unauthorized</h1>
+          <p className="mt-2 text-gray-300">{verification.error === 'Token expired' ? 'This share link has expired (valid for 1 day)' : 'Invalid or expired share link'}</p>
+          <p className="mt-4 text-sm text-gray-400">Please request a new share link from the owner.</p>
         </div>
       </div>
     )
@@ -47,9 +47,9 @@ export default async function MoviesSharePage(props: SharePageProps) {
   const favoriteIds = favoriteIdsSet instanceof Set ? favoriteIdsSet : new Set<number>()
 
   return (
-    <MoviesPageContent hideShareButton={true}>
-      <div className="mb-4 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
-        <p className="font-semibold">Shared Access</p>
+    <MoviesPageContent>
+      <div className="mb-4 rounded-lg bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 p-4 text-sm text-blue-200">
+        <p className="font-semibold text-white">Shared Access</p>
         <p className="mt-1">You have temporary access to add favorites. This link expires in 1 day.</p>
       </div>
 

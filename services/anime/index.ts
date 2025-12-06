@@ -49,6 +49,7 @@ export function findExistingAnime(previousAnime: Anime[], newAnime: Anime): Anim
 export function getNewAnime(currentAnime: Anime[], previousAnime: Anime[]): Anime[] {
   return currentAnime.filter((anime) => {
     const existing = findExistingAnime(previousAnime, anime)
+
     // New anime if not found in previous list
     return !existing
   })
@@ -71,6 +72,41 @@ export function getNewAnimeFromCache(cacheData: AnimeCacheData | null): Anime[] 
 
   // Get new anime by comparing current and previous
   return getNewAnime(cacheData.current.anime, cacheData.previous.anime)
+}
+
+/**
+ * Get anime list from cache only (read-only, no update)
+ * This function only reads from cache, never triggers updates or external API calls
+ * - Checks in-memory cache first
+ * - Reads from GIST if available
+ * - Returns cached data or empty array if cache not available
+ * This function is designed for detail pages to avoid triggering unnecessary updates
+ * @returns Anime list from cache, or empty array if cache not available
+ */
+export async function getAnimeListFromCache(): Promise<Anime[]> {
+  // Check in-memory cache first
+  const cachedResult = getResultFromCache()
+  if (cachedResult) {
+    info('getAnimeListFromCache - In-memory cache hit')
+    return cachedResult
+  }
+
+  // Read from GIST (read-only, no update check)
+  try {
+    const cacheData = await getAnimeFromGist()
+    if (cacheData && cacheData.current.anime) {
+      // Update in-memory cache for next time
+      setResultToCache(cacheData.current.anime)
+      info('getAnimeListFromCache - GIST cache hit')
+      return cacheData.current.anime
+    }
+  } catch (error) {
+    // GIST read failure - return empty array (graceful degradation)
+    info('getAnimeListFromCache - GIST read failed:', error)
+  }
+
+  // No cache available
+  return []
 }
 
 /**

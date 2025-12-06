@@ -1,0 +1,7 @@
+export { default as Badge } from './Badge'
+export { default as GenreBadge } from './GenreBadge'
+export { default as MaoyanBadge } from './MaoyanBadge'
+export { default as RatingBadge } from './RatingBadge'
+export { default as TMDBBadge } from './TMDBBadge'
+export { default as WishBadge } from './WishBadge'
+export { default as YearBadge } from './YearBadge'

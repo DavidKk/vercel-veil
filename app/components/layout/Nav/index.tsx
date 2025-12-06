@@ -1,9 +1,12 @@
+'use client'
+
 import FeatherIcon from 'feather-icons-react'
 import Link from 'next/link'
 
+import { useLayoutVisibility } from '@/hooks/useLayoutVisibility'
 import packageJson from '@/package.json'
 
-import { DEFAULT_NAV } from './constants'
+import { DEFAULT_NAV } from '../constants'
 
 export interface NavItem {
   name: string
@@ -20,6 +23,11 @@ const GITHUB_URL = packageJson.repository?.url
 
 export function Nav(props: NavProps) {
   const { title = DEFAULT_TITLE, nav = DEFAULT_NAV } = props
+  const shouldHide = useLayoutVisibility()
+
+  if (shouldHide) {
+    return null
+  }
 
   return (
     <nav className="w-full p-4 bg-indigo-500 text-white">

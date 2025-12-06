@@ -41,7 +41,7 @@ export default async function AnimePage() {
 
   return (
     <AnimePageContent>
-      <AnimeListAdaptive anime={filteredAnime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} initialIsMobile={initialIsMobile} />
+      <AnimeListAdaptive anime={filteredAnime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} shareToken={undefined} initialIsMobile={initialIsMobile} />
     </AnimePageContent>
   )
 }

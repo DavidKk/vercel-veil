@@ -7,8 +7,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 
 import { AssistSidebarPanel, AssistSidebarProvider, AssistSidebarRouteListener } from '@/components/AssistSidebar'
 
-import Footer from './Footer'
-import { Nav } from './Nav'
+import Layout from './components/layout'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,9 +39,7 @@ export default function RootLayout(props: Readonly<RootLayoutProps>) {
         <AssistSidebarProvider>
           <AssistSidebarRouteListener />
           <AssistSidebarPanel />
-          <Nav />
-          {children}
-          <Footer />
+          <Layout>{children}</Layout>
         </AssistSidebarProvider>
       </body>
     </html>

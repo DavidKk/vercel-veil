@@ -45,16 +45,22 @@ export const GET = cron(async (req: NextRequest) => {
   const currentDate = new Date().toISOString().split('T')[0]
 
   // Prepare movies data for template (raw data, no HTML formatting)
-  const moviesForTemplate = newMovies.map((movie) => ({
-    poster: movie.tmdbPoster || movie.poster || 'https://via.placeholder.com/80x120?text=No+Image',
-    name: movie.name || 'Unknown',
-    year: movie.year || null,
-    score: movie.score || null,
-    releaseDate: movie.releaseDate || null,
-    genres: movie.genres && movie.genres.length > 0 ? movie.genres : null,
-    maoyanUrl: movie.maoyanUrl || null,
-    tmdbUrl: movie.tmdbUrl || null,
-  }))
+  const moviesForTemplate = newMovies.map((movie) => {
+    // Build detail page URL - prefer tmdbId, fallback to maoyanId
+    const detailUrl = movie.tmdbId ? `${baseUrl}/movies/${movie.tmdbId}` : `${baseUrl}/movies/${movie.maoyanId}`
+
+    return {
+      poster: movie.tmdbPoster || movie.poster || 'https://via.placeholder.com/80x120?text=No+Image',
+      name: movie.name || 'Unknown',
+      year: movie.year || null,
+      score: movie.score || null,
+      releaseDate: movie.releaseDate || null,
+      genres: movie.genres && movie.genres.length > 0 ? movie.genres : null,
+      maoyanUrl: movie.maoyanUrl || null,
+      tmdbUrl: movie.tmdbUrl || null,
+      detailUrl,
+    }
+  })
 
   const templateVariables: Record<string, string> = {
     newMoviesCount: String(newMovies.length),

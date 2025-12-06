@@ -4,7 +4,7 @@ import { validateCookie } from '@/services/auth/access'
 import { fail } from '@/services/logger'
 import { getMergedMoviesList, type GetMergedMoviesListOptions } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
-import { getMoviesListWithAutoUpdate } from '@/services/movies'
+import { getMoviesListFromCache, getMoviesListWithAutoUpdate } from '@/services/movies'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 
@@ -143,5 +143,46 @@ export async function getFavoriteMovieIds(): Promise<number[]> {
     fail('getFavoriteMovieIds - Error:', error)
     // Return empty array as fallback, but error is logged
     return []
+  }
+}
+
+/**
+ * Get a single movie by ID from cache only (Server Action)
+ * Internal use only, requires authentication
+ * This function only reads from cache, never triggers updates or TMDB requests
+ * @param id Movie ID (can be tmdbId as number or maoyanId as string)
+ * @returns Movie data or null if not found
+ */
+export async function getMovieById(id: string | number): Promise<MergedMovie | null> {
+  // Authentication errors should be thrown immediately
+  if (!(await validateCookie())) {
+    fail('Unauthorized access to movie details')
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    // Get all movies from cache only (read-only, no update)
+    // This avoids triggering TMDB requests when accessing detail pages
+    const movies = await getMoviesListFromCache()
+
+    // Try to find by tmdbId first (if id is a number)
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id
+    if (!isNaN(numericId)) {
+      const movieByTmdbId = movies.find((m) => m.tmdbId === numericId)
+      if (movieByTmdbId) {
+        return movieByTmdbId
+      }
+    }
+
+    // Try to find by maoyanId (as string)
+    const movieByMaoyanId = movies.find((m) => String(m.maoyanId) === String(id))
+    if (movieByMaoyanId) {
+      return movieByMaoyanId
+    }
+
+    return null
+  } catch (error) {
+    fail('getMovieById - Error:', error)
+    throw error
   }
 }

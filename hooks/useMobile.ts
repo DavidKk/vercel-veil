@@ -7,21 +7,11 @@ export function useIsMobile(initialValue = false) {
 
   useEffect(() => {
     function detectMobile() {
-      let mobile = false
-
-      // Screen width detection
+      // Only use screen width to determine mobile (phone only, not tablet)
+      // Mobile (phone): < 1024px - use swipe view
+      // Tablet/PC: >= 1024px - use grid layout
       const width = window.innerWidth
-      if (width < 1024) {
-        mobile = true
-      }
-
-      // Touch Events detection
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-      if (isTouchDevice && width < 1200) {
-        mobile = true
-      }
-
-      setIsMobile(mobile)
+      setIsMobile(width < 1024)
     }
 
     detectMobile()

@@ -79,6 +79,42 @@ export function getNewMoviesFromCache(cacheData: MoviesCacheData | null): Merged
 }
 
 /**
+ * Get movies list from cache only (read-only, no update)
+ * This function only reads from cache, never triggers updates or TMDB requests
+ * - Checks in-memory cache first
+ * - Reads from GIST if available
+ * - Returns cached data or empty array if cache not available
+ * This function is designed for detail pages to avoid triggering unnecessary updates
+ * @returns Movies list from cache, or empty array if cache not available
+ */
+export async function getMoviesListFromCache(): Promise<MergedMovie[]> {
+  // Check in-memory cache first
+  const cachedResult = getResultFromCache()
+  if (cachedResult) {
+    info('getMoviesListFromCache - In-memory cache hit')
+    return cachedResult
+  }
+
+  // Read from GIST (read-only, no update check)
+  try {
+    const cacheData = await getMoviesFromGist()
+    if (cacheData && cacheData.current && cacheData.current.movies) {
+      const movies = cacheData.current.movies
+      // Update in-memory cache for faster subsequent access
+      setResultToCache(movies)
+      info('getMoviesListFromCache - GIST cache hit')
+      return movies
+    }
+  } catch (error) {
+    // GIST read failure - return empty array (don't trigger update)
+    info('getMoviesListFromCache - GIST read failed, returning empty array:', error)
+  }
+
+  // No cache available - return empty array (don't trigger update)
+  return []
+}
+
+/**
  * Get movies list with automatic GIST cache management
  * This function handles both reading and writing to GIST automatically
  * - Checks in-memory cache first

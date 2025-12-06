@@ -441,7 +441,20 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
     if (error instanceof Error && error.message.includes('Session ID')) {
       throw error
     }
-    fail('TMDB get account info error:', error)
+    // For network timeout/connection errors, use warn instead of fail
+    // These are temporary issues and shouldn't block functionality
+    const isTimeoutError =
+      error instanceof Error &&
+      (error.message.includes('timeout') ||
+        error.message.includes('TIMEOUT') ||
+        error.message.includes('Connect Timeout') ||
+        error.message.includes('fetch failed') ||
+        (error.cause && typeof error.cause === 'object' && 'code' in error.cause && error.cause.code === 'UND_ERR_CONNECT_TIMEOUT'))
+    if (isTimeoutError) {
+      warn('TMDB get account info timeout (network issue, will retry later):', error instanceof Error ? error.message : String(error))
+    } else {
+      fail('TMDB get account info error:', error)
+    }
     return null
   }
 }

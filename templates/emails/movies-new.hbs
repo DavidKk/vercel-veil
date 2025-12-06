@@ -87,6 +87,8 @@
         transition:
           transform 0.2s,
           box-shadow 0.2s;
+        text-decoration: none;
+        color: inherit;
       }
       .movie-item:hover {
         transform: translateY(-2px);
@@ -251,7 +253,7 @@
           <h2>New Movies List</h2>
           <div class="movie-list">
             {{#each newMoviesJSON}}
-            <div class="movie-item">
+            <a href="{{{detailUrl}}}" class="movie-item" style="text-decoration: none; color: inherit;">
               <div class="movie-poster">
                 <img src="{{{poster}}}" alt="{{name}}" />
               </div>
@@ -273,17 +275,17 @@
                 {{/if}}
                 <div class="movie-tags" style="margin-top: 6px;">
                   {{#if tmdbUrl}}
-                  <a href="{{{tmdbUrl}}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-tmdb">TMDB</a>
+                  <a href="{{{tmdbUrl}}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-tmdb" onclick="event.stopPropagation(); return true;">TMDB</a>
                   {{/if}}
                   {{#if maoyanUrl}}
-                  <a href="{{{maoyanUrl}}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-maoyan">猫眼</a>
+                  <a href="{{{maoyanUrl}}}" target="_blank" rel="noopener noreferrer" class="movie-tag-link movie-tag-maoyan" onclick="event.stopPropagation(); return true;">猫眼</a>
                   {{/if}}
                 </div>
                 {{#if releaseDate}}
                 <div class="movie-meta">{{releaseDate}}</div>
                 {{/if}}
               </div>
-            </div>
+            </a>
             {{/each}}
           </div>
         </div>
