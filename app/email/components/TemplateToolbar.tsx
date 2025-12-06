@@ -45,18 +45,24 @@ export function TemplateToolbar({
         {currentTemplate?.description ? <p className="mt-1 text-xs text-gray-500">{currentTemplate.description}</p> : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide">Variables</label>
-          {jsonError ? <span className="text-xs font-medium text-red-600">{jsonError}</span> : null}
+      {selectedId !== 'movies-new' ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide">Variables</label>
+            {jsonError ? <span className="text-xs font-medium text-red-600">{jsonError}</span> : null}
+          </div>
+          <textarea
+            className="min-h-[200px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={jsonInput}
+            onChange={(event) => onJsonChange(event.target.value)}
+            placeholder="Enter JSON variables..."
+          />
         </div>
-        <textarea
-          className="min-h-[200px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          value={jsonInput}
-          onChange={(event) => onJsonChange(event.target.value)}
-          placeholder="Enter JSON variables..."
-        />
-      </div>
+      ) : (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+          <p className="text-xs text-blue-800">This template automatically uses real new movies data from the cache. Variables are not editable.</p>
+        </div>
+      )}
 
       {currentTemplate ? (
         <div className="flex flex-col gap-2">

@@ -36,7 +36,13 @@ export function Prview({ templates }: TemplatePreviewerProps) {
   useEffect(() => {
     const template = templates.find((item) => item.id === selectedId)
     if (template) {
-      setJsonInput(JSON.stringify(template.defaultVariables, null, 2))
+      // For movies-new template, start with empty variables to trigger real data fetch
+      // The previewEmailTemplate will automatically fetch real data
+      if (template.id === 'movies-new') {
+        setJsonInput('{}')
+      } else {
+        setJsonInput(JSON.stringify(template.defaultVariables, null, 2))
+      }
     }
   }, [selectedId, templates])
 

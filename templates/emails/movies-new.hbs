@@ -87,12 +87,16 @@
         transition:
           transform 0.2s,
           box-shadow 0.2s;
-        text-decoration: none;
-        color: inherit;
       }
       .movie-item:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+      }
+      .movie-item .movie-poster:hover {
+        opacity: 0.9;
+      }
+      .movie-item .movie-title:hover {
+        color: #0284c7;
       }
       .movie-poster {
         position: relative;
@@ -101,6 +105,7 @@
         aspect-ratio: 2 / 3;
         overflow: hidden;
         background: #f3f4f6;
+        transition: opacity 0.2s;
       }
       .movie-poster img {
         width: 100%;
@@ -125,6 +130,7 @@
         line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        transition: color 0.2s;
       }
       .movie-meta {
         font-size: 12px;
@@ -253,16 +259,17 @@
           <h2>New Movies List</h2>
           <div class="movie-list">
             {{#each newMoviesJSON}}
-            <a href="{{{detailUrl}}}" class="movie-item" style="text-decoration: none; color: inherit;">
-              <div class="movie-poster">
+            <div class="movie-item">
+              <a href="{{{detailUrl}}}" class="movie-poster" style="text-decoration: none; color: inherit; display: block;">
                 <img src="{{{poster}}}" alt="{{name}}" />
-              </div>
+              </a>
               <div class="movie-info">
-                <p class="movie-title">{{name}}</p>
+                <a href="{{{detailUrl}}}" class="movie-title" style="text-decoration: none; color: inherit; display: block;">{{name}}</a>
                 <div class="movie-tags">
                   {{#if year}}
                   <span class="movie-tag movie-tag-year">{{year}}</span>
-                  {{/if}} {{#if score}}
+                  {{/if}}
+                  {{#if score}}
                   <span class="movie-tag movie-score">{{score}}</span>
                   {{/if}}
                 </div>
@@ -285,7 +292,7 @@
                 <div class="movie-meta">{{releaseDate}}</div>
                 {{/if}}
               </div>
-            </a>
+            </div>
             {{/each}}
           </div>
         </div>
