@@ -1,4 +1,5 @@
 import { setHeaders } from '@/services/context'
+import { info } from '@/services/logger'
 
 import { CACHEABLE_HEADERS, FETCH_CACHE, FETCH_CACHE_SIZE } from './constants'
 
@@ -45,6 +46,7 @@ export async function fetchWithCache(url: string, options?: FetchOptions) {
   if (cached) {
     const isCacheValid = now - cached.timestamp < cacheDuration
     if (isCacheValid) {
+      info(`Cache hit for URL: ${url}`)
       setHeaders({
         'Hit-Cache': '1',
       })
@@ -142,6 +144,13 @@ function generateCacheKey(url: string, options?: RequestInit): string {
         relevantOptions[`header:${key.toLowerCase()}`] = value
       }
     }
+  }
+
+  // Include body for POST/PUT/PATCH requests to ensure cache key uniqueness
+  if (options?.body && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH')) {
+    // For string bodies, use directly; for other types, convert to string
+    const bodyStr = typeof options.body === 'string' ? options.body : JSON.stringify(options.body)
+    relevantOptions.body = bodyStr
   }
 
   return JSON.stringify({ url, options: relevantOptions })

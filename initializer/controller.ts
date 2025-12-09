@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
+import { ensureCronAuthorized } from '@/services/auth/api'
 import { getHeaders, runWithContext } from '@/services/context'
 import { fail } from '@/services/logger'
-import { ensureCronAuthorized } from '@/utils/webhooks/auth'
 
 import { isStandardResponse, standardResponseError, stringifyUnknownError } from './response'
 
@@ -85,6 +85,50 @@ export function buffer<P>(handle: (req: NextRequest, context: ContextWithParams<
         const message = stringifyUnknownError(err)
         fail(`PlainText handler error: ${message}`)
         return new NextResponse(message, { status: 500 })
+      }
+    })
+  }
+}
+
+/**
+ * XML response handler wrapper
+ * Handles XML string responses and sets appropriate Content-Type header
+ * @param handle Handler function that returns XML string or NextResponse
+ * @returns Next.js route handler
+ */
+export function xml<P>(handle: (req: NextRequest, context: ContextWithParams<P>) => Promise<string | NextResponse>) {
+  return async (req: NextRequest, context: { params: Promise<any> }) => {
+    return runWithContext(req, async () => {
+      try {
+        const result = await handle(req, context)
+        if (result instanceof NextResponse) {
+          return result
+        }
+
+        // At this point, result must be a string (XML content)
+        const xmlString = result
+        const collectHeaders = getHeaders()
+
+        // Convert Headers to plain object if needed, similar to api() function
+        const headersObj: Record<string, string> = {}
+        if (collectHeaders) {
+          collectHeaders.forEach((value, key) => {
+            headersObj[key] = value
+          })
+        }
+
+        // Set XML content type header
+        headersObj['Content-Type'] = 'application/xml; charset=UTF-8'
+
+        return new NextResponse(xmlString, { status: 200, headers: headersObj })
+      } catch (err) {
+        if (err instanceof NextResponse) {
+          return err
+        }
+
+        const message = stringifyUnknownError(err)
+        fail(`XML handler error: ${message}`)
+        return new NextResponse(message, { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
       }
     })
   }

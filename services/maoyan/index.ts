@@ -1,7 +1,7 @@
 import { fetchJsonWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 import type { TMDBMovie } from '@/services/tmdb'
-import { fetchPopularMovies, fetchUpcomingMovies, getGenreNames, getMovieDetails, getMovieGenres, searchMulti } from '@/services/tmdb'
+import { fetchMovieGenres, fetchPopularMovies, fetchUpcomingMovies, getGenreNames, getMovieDetails, searchMulti } from '@/services/tmdb'
 import { hasTmdbApiKey } from '@/services/tmdb/env'
 
 import { MAOYAN, MAOYAN_CACHE } from './constants'
@@ -14,17 +14,12 @@ import type { ComingMovie, MergedMovie, MostExpectedResponse, MovieListItem, Top
  */
 async function fetchTopRatedMoviesWithoutCache(): Promise<MovieListItem[]> {
   info('Fetching top rated movies from Maoyan (no cache)')
-  const response = await fetch(`${MAOYAN.API_BASE}/index/topRatedMovies`, {
+  const data = await fetchJsonWithCache<TopRatedMoviesResponse>(`${MAOYAN.API_BASE}/index/topRatedMovies`, {
     headers: {
       'User-Agent': MAOYAN.USER_AGENT,
     },
+    cacheDuration: 0, // No cache for this function
   })
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`)
-  }
-
-  const data = (await response.json()) as TopRatedMoviesResponse
   info(`Fetched ${data.movieList?.length || 0} top rated movies (no cache)`)
   return data.movieList || []
 }
@@ -54,17 +49,12 @@ export async function fetchTopRatedMovies(): Promise<MovieListItem[]> {
  */
 async function fetchMostExpectedWithoutCache(limit = 20, offset = 0): Promise<ComingMovie[]> {
   info(`Fetching most expected movies from Maoyan (no cache, limit=${limit}, offset=${offset})`)
-  const response = await fetch(`${MAOYAN.API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
+  const data = await fetchJsonWithCache<MostExpectedResponse>(`${MAOYAN.API_BASE}/index/mostExpected?ci=1&limit=${limit}&offset=${offset}`, {
     headers: {
       'User-Agent': MAOYAN.USER_AGENT,
     },
+    cacheDuration: 0, // No cache for this function
   })
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`)
-  }
-
-  const data = (await response.json()) as MostExpectedResponse
   info(`Fetched ${data.coming?.length || 0} most expected movies (no cache)`)
   return data.coming || []
 }
@@ -283,7 +273,7 @@ async function batchEnrichMoviesWithTMDB(movies: MergedMovie[], tmdbTitleMap?: M
 
   // Step 6: Apply genre names to movies
   if (movieGenreMap.size > 0) {
-    const genresMap = await getMovieGenres()
+    const genresMap = await fetchMovieGenres()
     for (const [movieIndex, genreIds] of movieGenreMap.entries()) {
       if (enrichedMovies[movieIndex]) {
         enrichedMovies[movieIndex].genres = genreIds.map((id) => genresMap.get(id) || '').filter((name) => name !== '')

@@ -2,12 +2,12 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
+import { ensureWebhookAuthorized } from '@/services/auth/api'
 import { fail } from '@/services/logger'
 import { resolvePreferredTitle } from '@/services/metadata/title'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
 import { syncToTMDBFavoritesAsync } from '@/services/tmdb/sync'
-import { ensureWebhookAuthorized } from '@/utils/webhooks/auth'
 
 import type { RadarrWebhookPayload } from './types'
 import { isRadarrPayload } from './types'

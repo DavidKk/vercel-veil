@@ -18,37 +18,24 @@ export interface TMDBGenresResponse {
 }
 
 /**
- * Cache for movie genres (lazy loaded)
+ * Fetch movie genres list from TMDB (with cache)
+ * Results are cached by fetchJsonWithCache to reduce API requests
  */
-let movieGenresCache: Map<number, string> | null = null
-
-/**
- * Get movie genres list from TMDB and cache it
- */
-export async function getMovieGenres(): Promise<Map<number, string>> {
-  if (movieGenresCache) {
-    return movieGenresCache
-  }
-
+export async function fetchMovieGenres(): Promise<Map<number, string>> {
   const apiKey = getTmdbApiKey()
   const language = process.env.TMDB_LANGUAGE ?? 'zh-CN'
 
   info('Fetching movie genres from TMDB')
   const apiUrl = `${TMDB.API_BASE_URL}/genre/movie/list?api_key=${apiKey}&language=${language}`
-  const response = await fetch(apiUrl, {
+  const data = await fetchJsonWithCache<TMDBGenresResponse>(apiUrl, {
     headers: {
       accept: 'application/json',
     },
+    cacheDuration: 60 * 1000, // 1 minute
   })
-
-  if (!response.ok) {
-    throw new Error(`TMDB fetch movie genres failed: status=${response.status} ${response.statusText}`)
-  }
-
-  const data = (await response.json()) as TMDBGenresResponse
-  movieGenresCache = new Map(data.genres.map((genre) => [genre.id, genre.name]))
-  info(`Fetched ${movieGenresCache.size} movie genres from TMDB`)
-  return movieGenresCache
+  const genresMap = new Map(data.genres.map((genre) => [genre.id, genre.name]))
+  info(`Fetched ${genresMap.size} movie genres from TMDB`)
+  return genresMap
 }
 
 /**
@@ -59,7 +46,7 @@ export async function getGenreNames(genreIds: number[]): Promise<string[]> {
     return []
   }
 
-  const genresMap = await getMovieGenres()
+  const genresMap = await fetchMovieGenres()
   return genreIds.map((id) => genresMap.get(id) || '').filter((name) => name !== '')
 }
 
@@ -145,17 +132,12 @@ export async function fetchPopularMovies(options: FetchMoviesOptions = {}): Prom
   }
 
   const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
-  const response = await fetch(apiUrl, {
+  const data = await fetchJsonWithCache<TMDBMoviesResponse>(apiUrl, {
     headers: {
       accept: 'application/json',
     },
+    cacheDuration: 60 * 1000, // 1 minute
   })
-
-  if (!response.ok) {
-    throw new Error(`TMDB fetch popular movies failed: status=${response.status} ${response.statusText}`)
-  }
-
-  const data = (await response.json()) as TMDBMoviesResponse
   if (!data || !data.results) {
     throw new Error(`TMDB fetch popular movies: invalid response structure`)
   }
@@ -196,17 +178,12 @@ export async function fetchUpcomingMovies(options: FetchMoviesOptions = {}): Pro
   }
 
   const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
-  const response = await fetch(apiUrl, {
+  const data = await fetchJsonWithCache<TMDBMoviesResponse>(apiUrl, {
     headers: {
       accept: 'application/json',
     },
+    cacheDuration: 60 * 1000, // 1 minute
   })
-
-  if (!response.ok) {
-    throw new Error(`TMDB fetch upcoming movies failed: status=${response.status} ${response.statusText}`)
-  }
-
-  const data = (await response.json()) as TMDBMoviesResponse
   if (!data || !data.results) {
     throw new Error(`TMDB fetch upcoming movies: invalid response structure`)
   }
@@ -244,17 +221,12 @@ export async function discoverMovies(options: FetchMoviesOptions = {}): Promise<
   }
 
   const apiUrl = `${TMDB.API_BASE_URL}/discover/movie?${params.toString()}`
-  const response = await fetch(apiUrl, {
+  const data = await fetchJsonWithCache<TMDBMoviesResponse>(apiUrl, {
     headers: {
       accept: 'application/json',
     },
+    cacheDuration: 60 * 1000, // 1 minute
   })
-
-  if (!response.ok) {
-    throw new Error(`TMDB discover movies failed: status=${response.status} ${response.statusText}`)
-  }
-
-  const data = (await response.json()) as TMDBMoviesResponse
   info(`Discovered ${data.results.length} movies from TMDB`)
   return data.results
 }
@@ -412,34 +384,27 @@ async function getAccountInfo(): Promise<{ accountId: number } | null> {
   try {
     const apiUrl = `${TMDB.API_BASE_URL}/account?api_key=${apiKey}&session_id=${sessionId}`
 
-    const response = await fetch(apiUrl, {
+    const data = await fetchJsonWithCache<{ id: number; username?: string }>(apiUrl, {
       headers: {
         accept: 'application/json',
       },
+      cacheDuration: 60 * 1000, // 1 minute
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      // Limit error body length to avoid logging sensitive information
-      const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
-      fail(`TMDB get account info failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
-
-      // Provide more detailed error information
-      if (response.status === 401) {
-        throw new Error('TMDB Session ID is invalid or expired, please get a new Session ID')
-      } else if (response.status === 403) {
-        throw new Error('TMDB API Key is invalid or unauthorized, please check API Key configuration')
-      }
-
-      return null
-    }
-
-    const data = (await response.json()) as { id: number; username?: string }
     info('Successfully fetched TMDB account info')
     return { accountId: data.id }
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Session ID')) {
-      throw error
+    if (error instanceof Error && error.message.includes('HTTP error')) {
+      const statusMatch = error.message.match(/Status: (\d+)/)
+      if (statusMatch) {
+        const status = parseInt(statusMatch[1], 10)
+        if (status === 401) {
+          throw new Error('TMDB Session ID is invalid or expired, please get a new Session ID')
+        } else if (status === 403) {
+          throw new Error('TMDB API Key is invalid or unauthorized, please check API Key configuration')
+        }
+      }
+      return null
     }
     // For network timeout/connection errors, use warn instead of fail
     // These are temporary issues and shouldn't block functionality
@@ -495,25 +460,17 @@ export async function getFavoriteTVs(): Promise<Set<number>> {
     let totalPages = 1
 
     do {
-      const response = await fetch(`${apiUrl}&page=${page}`, {
-        headers: {
-          accept: 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
-        fail(`TMDB get favorite TVs failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
-        break
-      }
-
-      const data = (await response.json()) as {
+      const data = await fetchJsonWithCache<{
         page: number
         results: Array<{ id: number }>
         total_pages: number
         total_results: number
-      }
+      }>(`${apiUrl}&page=${page}`, {
+        headers: {
+          accept: 'application/json',
+        },
+        cacheDuration: 60 * 1000, // 1 minute
+      })
 
       data.results.forEach((tv) => {
         favoriteIds.add(tv.id)
@@ -567,26 +524,17 @@ export async function getFavoriteMovies(): Promise<Set<number>> {
     let totalPages = 1
 
     do {
-      const response = await fetch(`${apiUrl}&page=${page}`, {
-        headers: {
-          accept: 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        // Limit error body length to avoid logging sensitive information
-        const limitedErrorText = errorText.length > 200 ? errorText.substring(0, 200) + '...' : errorText
-        fail(`TMDB get favorite movies failed: status=${response.status} ${response.statusText}, body=${limitedErrorText}`)
-        break
-      }
-
-      const data = (await response.json()) as {
+      const data = await fetchJsonWithCache<{
         page: number
         results: Array<{ id: number }>
         total_pages: number
         total_results: number
-      }
+      }>(`${apiUrl}&page=${page}`, {
+        headers: {
+          accept: 'application/json',
+        },
+        cacheDuration: 60 * 1000, // 1 minute
+      })
 
       data.results.forEach((movie) => {
         favoriteIds.add(movie.id)

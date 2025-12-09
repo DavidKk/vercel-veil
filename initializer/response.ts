@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { create } from 'xmlbuilder2'
 
 export interface StandardResponse {
   code: number
@@ -130,4 +131,30 @@ export function jsonInvalidParameters(message: string, options: ErrorResponseIni
 
 export function jsonUnauthorized(message = 'unauthorized', options: ErrorResponseInit = {}) {
   return unauthorized(message).toJsonResponse(401, options)
+}
+
+/**
+ * Generate Newznab error XML response
+ * @param message Error message
+ * @param status HTTP status code
+ * @param options Response options (headers, etc.)
+ * @returns NextResponse with XML error
+ */
+export function xmlNewznabError(message: string, status: number, options: ResponseInit = {}): NextResponse {
+  const root = create({ version: '1.0', encoding: 'UTF-8' }).ele('error', { code: String(status) })
+  root.txt(message)
+  const xml = root.end({ prettyPrint: true })
+
+  const headers = new Headers()
+  options.headers?.forEach((value, key) => {
+    headers.set(key, value)
+  })
+
+  headers.set('Content-Type', 'application/xml; charset=UTF-8')
+
+  return new NextResponse(xml, {
+    status,
+    ...options,
+    headers,
+  })
 }

@@ -1,3 +1,4 @@
+import { fetchJsonWithCache } from '@/services/fetch'
 import { fail, info } from '@/services/logger'
 import { searchByTitle } from '@/services/thetvdb'
 import { hasTheTvdbApiKey } from '@/services/thetvdb/env'
@@ -86,20 +87,16 @@ async function executeGraphQLQuery(query: string, variables: Record<string, unkn
     headers.Authorization = `Bearer ${accessToken}`
   }
 
-  const response = await fetch(ANILIST.API_ENDPOINT, {
+  // Note: fetchJsonWithCache handles POST requests by including body in cache key
+  const data = await fetchJsonWithCache<{ data?: AniListPageResponse; errors?: Array<{ message: string }> }>(ANILIST.API_ENDPOINT, {
     method: 'POST',
     headers,
     body: JSON.stringify({
       query,
       variables,
     }),
+    cacheDuration: 60 * 1000, // 1 minute
   })
-
-  if (!response.ok) {
-    throw new Error(`AniList API error: status=${response.status} ${response.statusText}`)
-  }
-
-  const data = (await response.json()) as { data?: AniListPageResponse; errors?: Array<{ message: string }> }
 
   if (data.errors) {
     throw new Error(`AniList GraphQL errors: ${data.errors.map((e) => e.message).join(', ')}`)

@@ -1,3 +1,4 @@
+import { fetchWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 import { searchByTitle as searchByTitleFromTheTVDB } from '@/services/thetvdb'
 import { hasTheTvdbApiKey } from '@/services/thetvdb/env'
@@ -17,9 +18,22 @@ export * from './types'
  * @returns Promise<Response> The fetch response object
  */
 export async function fetchDoubanRSS(url: string): Promise<Response> {
-  return fetch(url, {
+  // Use fetchWithCache to get cached response
+  // Note: fetchWithCache returns ArrayBuffer, so we convert it to Response
+  const buffer = await fetchWithCache(url, {
     method: 'GET',
     headers: RSS_HEADERS,
+    cacheDuration: 60 * 1000, // 1 minute
+  })
+
+  // Convert ArrayBuffer to Response for compatibility with existing code
+  return new Response(buffer, {
+    status: 200,
+    statusText: 'OK',
+    headers: {
+      ...RSS_HEADERS,
+      'Content-Type': 'application/xml; charset=utf-8',
+    },
   })
 }
 

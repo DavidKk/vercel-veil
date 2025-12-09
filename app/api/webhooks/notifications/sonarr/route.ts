@@ -2,11 +2,11 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
+import { ensureWebhookAuthorized } from '@/services/auth/api'
 import { fail } from '@/services/logger'
 import { resolvePreferredTitle } from '@/services/metadata/title'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
-import { ensureWebhookAuthorized } from '@/utils/webhooks/auth'
 
 import type { SonarrWebhookPayload } from './types'
 import { isSonarrPayload } from './types'

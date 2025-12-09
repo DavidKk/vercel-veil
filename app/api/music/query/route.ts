@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, jsonSuccess } from '@/initializer/response'
+import { ensureApiAuthorized } from '@/services/auth/api'
 import { fail } from '@/services/logger'
 import { search } from '@/services/navidrome'
-import { ensureApiAuthorized } from '@/utils/webhooks/auth'
 
 export const runtime = 'nodejs'
 

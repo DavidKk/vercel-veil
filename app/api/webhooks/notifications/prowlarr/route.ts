@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server'
 
 import { api } from '@/initializer/controller'
 import { jsonInvalidParameters, standardResponseSuccess } from '@/initializer/response'
+import { ensureProwlarrAuthorized } from '@/services/auth/api'
 import { fail } from '@/services/logger'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
-import { ensureProwlarrAuthorized } from '@/utils/webhooks/auth'
 
 import type { ProwlarrWebhookPayload } from './types'
 import { isProwlarrPayload } from './types'

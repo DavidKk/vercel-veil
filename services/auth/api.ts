@@ -97,6 +97,27 @@ function checkTokenAuth(req: NextRequest): boolean {
   return token === TOKEN_SECRET
 }
 
+/**
+ * Verify API key from query parameter
+ * @param req NextRequest object
+ * @returns true if API key is valid
+ */
+export function verifyApiKey(req: NextRequest): boolean {
+  const { searchParams } = new URL(req.url)
+  const apikey = searchParams.get('apikey')
+
+  if (!apikey) {
+    return false
+  }
+
+  const apiSecret = process.env.API_SECRET
+  if (!apiSecret) {
+    return false
+  }
+
+  return apikey === apiSecret
+}
+
 // ============================================
 // Cookie Auth Helper Functions
 // ============================================
