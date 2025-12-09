@@ -8,7 +8,7 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
     name: 'Prowlarr - Test',
     description: 'Template for Prowlarr test notifications',
     html: prowlarrDefault,
-    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetailsJSON', 'releaseDetailsJSON', 'applicationUrl'],
     defaultVariables: {
       indexerName: 'Test Indexer',
       eventType: 'Test',
@@ -17,8 +17,8 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
       protocol: 'Torrent',
       statusChange: 'N/A',
       message: 'This is a test notification from Prowlarr to verify webhook connectivity.',
-      indexerDetails: '',
-      releaseDetails: '',
+      indexerDetailsJSON: JSON.stringify([]),
+      releaseDetailsJSON: JSON.stringify([]),
     },
   },
   {
@@ -26,7 +26,7 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
     name: 'Prowlarr - Grab',
     description: 'Template for Prowlarr grab notifications',
     html: prowlarrDefault,
-    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetailsJSON', 'releaseDetailsJSON', 'applicationUrl'],
     defaultVariables: {
       indexerName: 'Nyaa.si',
       eventType: 'Grab',
@@ -36,8 +36,12 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
       statusChange: 'N/A',
       message: '[New-raws] One Piece - 1151 [1080p] [WEB-DL].mkv grabbed by Sonarr from Nyaa.si',
       indexerDetails: '',
-      releaseDetails:
-        '<div class="stack-item">Title: [New-raws] One Piece - 1151 [1080p] [WEB-DL].mkv</div><div class="stack-item">Quality: 1080p WEB-DL</div><div class="stack-item">Indexer: Nyaa.si</div><div class="stack-item">Size: 1.2 GB</div>',
+      releaseDetailsJSON: JSON.stringify([
+        { label: 'Title', value: '[New-raws] One Piece - 1151 [1080p] [WEB-DL].mkv' },
+        { label: 'Quality', value: '1080p WEB-DL' },
+        { label: 'Indexer', value: 'Nyaa.si' },
+        { label: 'Size', value: '1.2 GB' },
+      ]),
     },
   },
   {
@@ -45,7 +49,7 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
     name: 'Prowlarr - Indexer Status Change',
     description: 'Template for Prowlarr indexer status change notifications',
     html: prowlarrDefault,
-    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetailsJSON', 'releaseDetailsJSON', 'applicationUrl'],
     defaultVariables: {
       indexerName: 'RARBG',
       eventType: 'IndexerStatusChange',
@@ -54,8 +58,12 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
       protocol: 'Torrent',
       statusChange: 'Healthy → Unhealthy',
       message: 'Indexer is no longer responding to requests',
-      indexerDetails:
-        '<div class="stack-item">Protocol: Torrent</div><div class="stack-item">Priority: 1</div><div class="stack-item">RSS: Enabled</div><div class="stack-item">Automatic Search: Enabled</div>',
+      indexerDetailsJSON: JSON.stringify([
+        { label: 'Protocol', value: 'Torrent' },
+        { label: 'Priority', value: '1' },
+        { label: 'RSS', value: 'Enabled' },
+        { label: 'Automatic Search', value: 'Enabled' },
+      ]),
       releaseDetails: '',
     },
   },
@@ -64,7 +72,7 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
     name: 'Prowlarr - Indexer Update',
     description: 'Template for Prowlarr indexer update notifications',
     html: prowlarrDefault,
-    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetailsJSON', 'releaseDetailsJSON', 'applicationUrl'],
     defaultVariables: {
       indexerName: '1337x',
       eventType: 'IndexerUpdate',
@@ -73,8 +81,13 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
       protocol: 'Torrent',
       statusChange: 'N/A',
       message: 'Indexer configuration has been updated',
-      indexerDetails:
-        '<div class="stack-item">Protocol: Torrent</div><div class="stack-item">Priority: 2</div><div class="stack-item">RSS: Enabled</div><div class="stack-item">Automatic Search: Enabled</div><div class="stack-item">Interactive Search: Enabled</div>',
+      indexerDetailsJSON: JSON.stringify([
+        { label: 'Protocol', value: 'Torrent' },
+        { label: 'Priority', value: '2' },
+        { label: 'RSS', value: 'Enabled' },
+        { label: 'Automatic Search', value: 'Enabled' },
+        { label: 'Interactive Search', value: 'Enabled' },
+      ]),
       releaseDetails: '',
     },
   },
@@ -83,7 +96,7 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
     name: 'Prowlarr - Indexer Delete',
     description: 'Template for Prowlarr indexer delete notifications',
     html: prowlarrDefault,
-    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetailsJSON', 'releaseDetailsJSON', 'applicationUrl'],
     defaultVariables: {
       indexerName: 'ThePirateBay',
       eventType: 'IndexerDelete',
@@ -92,7 +105,10 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
       protocol: 'Torrent',
       statusChange: 'N/A',
       message: 'Indexer has been removed from Prowlarr',
-      indexerDetails: '<div class="stack-item">Protocol: Torrent</div><div class="stack-item">Priority: 3</div>',
+      indexerDetailsJSON: JSON.stringify([
+        { label: 'Protocol', value: 'Torrent' },
+        { label: 'Priority', value: '3' },
+      ]),
       releaseDetails: '',
     },
   },
@@ -101,7 +117,7 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
     name: 'Prowlarr - Indexer Added',
     description: 'Template for Prowlarr indexer added notifications',
     html: prowlarrDefault,
-    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetails', 'releaseDetails', 'applicationUrl'],
+    variables: ['indexerName', 'eventType', 'actionLabel', 'instanceName', 'protocol', 'statusChange', 'message', 'indexerDetailsJSON', 'releaseDetailsJSON', 'applicationUrl'],
     defaultVariables: {
       indexerName: 'TorrentGalaxy',
       eventType: 'IndexerAdded',
@@ -110,8 +126,13 @@ export const prowlarrTemplates: EmailTemplateDefinition[] = [
       protocol: 'Torrent',
       statusChange: 'N/A',
       message: 'New indexer has been added to Prowlarr',
-      indexerDetails:
-        '<div class="stack-item">Protocol: Torrent</div><div class="stack-item">Priority: 4</div><div class="stack-item">RSS: Enabled</div><div class="stack-item">Automatic Search: Enabled</div><div class="stack-item">Interactive Search: Enabled</div>',
+      indexerDetailsJSON: JSON.stringify([
+        { label: 'Protocol', value: 'Torrent' },
+        { label: 'Priority', value: '4' },
+        { label: 'RSS', value: 'Enabled' },
+        { label: 'Automatic Search', value: 'Enabled' },
+        { label: 'Interactive Search', value: 'Enabled' },
+      ]),
       releaseDetails: '',
     },
   },

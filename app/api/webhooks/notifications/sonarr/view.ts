@@ -23,10 +23,10 @@ export interface SonarrTemplateVariables {
   downloadClient: string
   /** Whether this is an upgrade (Yes/No) */
   isUpgrade: string
-  /** Formatted episode list HTML */
-  episodeList: string
-  /** Formatted release details HTML */
-  releaseDetails: string
+  /** Formatted episode list as JSON array */
+  episodeListJSON: string
+  /** Formatted release details as JSON array */
+  releaseDetailsJSON: string
   /** Cover image URL */
   coverImage: string
   /** Series synopsis/overview */
@@ -60,8 +60,8 @@ export async function prepareSonarrTemplateVariables(payload: SonarrWebhookPaylo
     instanceName,
     downloadClient,
     isUpgrade,
-    episodeList,
-    releaseDetails,
+    episodeListJSON: JSON.stringify(episodeList),
+    releaseDetailsJSON: JSON.stringify(releaseDetails),
     coverImage: metadata.coverImage,
     synopsis: metadata.synopsis,
     detailUrl: metadata.detailUrl,
@@ -87,62 +87,61 @@ function getActionLabel(eventType: string): string {
 }
 
 /**
- * Format episode list as HTML for template
+ * Format episode list as data array for template
  * @param payload Sonarr webhook payload
- * @returns HTML string with episode list
+ * @returns Array of episode objects with code, name, and airDate
  */
-function formatEpisodeList(payload: SonarrWebhookPayload): string {
-  const list = payload.episodes
-    ?.map((episode) => {
-      const code = formatEpisodeCode(episode.seasonNumber, episode.episodeNumber)
-      const name = escapeHtml(episode.title)
-      const airDate = episode.airDateUtc || episode.airDate
-      const dateStr = airDate ? ` · ${escapeHtml(airDate)}` : ''
-      return `<div class="stack-item">${code} · ${name}${dateStr}</div>`
-    })
-    .join('')
+function formatEpisodeList(payload: SonarrWebhookPayload): Array<{ code: string; name: string; airDate: string }> {
+  if (!payload.episodes || payload.episodes.length === 0) {
+    return [{ code: '', name: 'No episode information available', airDate: '' }]
+  }
 
-  return list || '<div class="stack-item">No episode information available</div>'
+  return payload.episodes.map((episode) => {
+    const code = formatEpisodeCode(episode.seasonNumber, episode.episodeNumber)
+    const name = episode.title || ''
+    const airDate = episode.airDateUtc || episode.airDate || ''
+    return { code, name, airDate }
+  })
 }
 
 /**
- * Format release details as HTML for template
+ * Format release details as data array for template
  * @param release Release information from Sonarr
- * @returns HTML string with release details
+ * @returns Array of release detail objects with label and value
  */
-function formatReleaseDetails(release?: SonarrRelease): string {
+function formatReleaseDetails(release?: SonarrRelease): Array<{ label: string; value: string }> {
   if (!release) {
-    return ''
+    return []
   }
 
-  const items: string[] = []
+  const items: Array<{ label: string; value: string }> = []
 
   const qualityName = release.quality?.quality?.name
   const qualitySource = release.quality?.quality?.source
   const resolution = release.quality?.quality?.resolution
   if (qualityName || qualitySource || resolution) {
     const qualityText = [qualityName, qualitySource, resolution && `${resolution}p`].filter(Boolean).join(' / ')
-    items.push(`<div class="stack-item">Quality: ${escapeHtml(qualityText)}</div>`)
+    items.push({ label: 'Quality', value: qualityText })
   }
 
   if (release.releaseTitle) {
-    items.push(`<div class="stack-item">Title: ${escapeHtml(release.releaseTitle)}</div>`)
+    items.push({ label: 'Title', value: release.releaseTitle })
   }
 
   if (release.releaseGroup) {
-    items.push(`<div class="stack-item">Release Group: ${escapeHtml(release.releaseGroup)}</div>`)
+    items.push({ label: 'Release Group', value: release.releaseGroup })
   }
 
   const size = formatFileSize(release.size)
   if (size) {
-    items.push(`<div class="stack-item">Size: ${escapeHtml(size)}</div>`)
+    items.push({ label: 'Size', value: size })
   }
 
   if (release.indexer) {
-    items.push(`<div class="stack-item">Indexer: ${escapeHtml(release.indexer)}</div>`)
+    items.push({ label: 'Indexer', value: release.indexer })
   }
 
-  return items.join('')
+  return items
 }
 
 /**

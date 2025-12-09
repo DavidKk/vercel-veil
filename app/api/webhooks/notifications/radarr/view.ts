@@ -23,8 +23,8 @@ export interface RadarrTemplateVariables {
   downloadClient: string
   /** Whether this is an upgrade (Yes/No) */
   isUpgrade: string
-  /** Formatted release details HTML */
-  releaseDetails: string
+  /** Formatted release details as JSON array */
+  releaseDetailsJSON: string
   /** Cover image URL */
   coverImage: string
   /** Movie synopsis/overview */
@@ -59,7 +59,7 @@ export async function prepareRadarrTemplateVariables(payload: RadarrWebhookPaylo
     instanceName,
     downloadClient,
     isUpgrade,
-    releaseDetails,
+    releaseDetailsJSON: JSON.stringify(releaseDetails),
     coverImage: metadata.coverImage,
     synopsis: metadata.synopsis,
     detailUrl: metadata.detailUrl,
@@ -84,52 +84,52 @@ function getActionLabel(eventType: string): string {
 }
 
 /**
- * Format release details as HTML for template
+ * Format release details as data array for template
  * @param release Release information from Radarr
- * @returns HTML string with release details
+ * @returns Array of release detail objects with label and value
  */
-function formatReleaseDetails(release?: RadarrRelease): string {
+function formatReleaseDetails(release?: RadarrRelease): Array<{ label: string; value: string }> {
   if (!release) {
-    return ''
+    return []
   }
 
-  const items: string[] = []
+  const items: Array<{ label: string; value: string }> = []
 
   const qualityName = release.quality?.quality?.name
   const qualitySource = release.quality?.quality?.source
   const resolution = release.quality?.quality?.resolution
   if (qualityName || qualitySource || resolution) {
     const qualityText = [qualityName, qualitySource, resolution && `${resolution}p`].filter(Boolean).join(' / ')
-    items.push(`<div class="stack-item">Quality: ${escapeHtml(qualityText)}</div>`)
+    items.push({ label: 'Quality', value: qualityText })
   }
 
   if (release.releaseTitle) {
-    items.push(`<div class="stack-item">Title: ${escapeHtml(release.releaseTitle)}</div>`)
+    items.push({ label: 'Title', value: release.releaseTitle })
   }
 
   if (release.releaseGroup) {
-    items.push(`<div class="stack-item">Release Group: ${escapeHtml(release.releaseGroup)}</div>`)
+    items.push({ label: 'Release Group', value: release.releaseGroup })
   }
 
   const size = formatFileSize(release.size)
   if (size) {
-    items.push(`<div class="stack-item">Size: ${escapeHtml(size)}</div>`)
+    items.push({ label: 'Size', value: size })
   }
 
   if (release.indexer) {
-    items.push(`<div class="stack-item">Indexer: ${escapeHtml(release.indexer)}</div>`)
+    items.push({ label: 'Indexer', value: release.indexer })
   }
 
-  const customFormats = release.customFormatInfo?.map((format) => escapeHtml(format.name ?? format.formatTag)).filter(Boolean)
+  const customFormats = release.customFormatInfo?.map((format) => format.name ?? format.formatTag).filter(Boolean)
   if (customFormats && customFormats.length) {
-    items.push(`<div class="stack-item">Custom Formats: ${customFormats.join(', ')}</div>`)
+    items.push({ label: 'Custom Formats', value: customFormats.join(', ') })
   }
 
   if (typeof release.customFormatScore === 'number') {
-    items.push(`<div class="stack-item">Format Score: ${escapeHtml(String(release.customFormatScore))}</div>`)
+    items.push({ label: 'Format Score', value: String(release.customFormatScore) })
   }
 
-  return items.join('')
+  return items
 }
 
 /**

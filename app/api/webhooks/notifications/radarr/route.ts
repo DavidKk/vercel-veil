@@ -74,7 +74,7 @@ export const POST = api(async (req: NextRequest) => {
     instanceName: variables.instanceName,
     downloadClient: variables.downloadClient,
     isUpgrade: variables.isUpgrade,
-    releaseDetails: variables.releaseDetails,
+    releaseDetailsJSON: variables.releaseDetailsJSON,
     coverImage: variables.coverImage,
     synopsis: variables.synopsis,
     detailUrl: variables.detailUrl,

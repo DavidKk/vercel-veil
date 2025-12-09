@@ -20,10 +20,10 @@ export interface ProwlarrTemplateVariables {
   statusChange: string
   /** Additional message */
   message: string
-  /** Indexer details HTML */
-  indexerDetails: string
-  /** Release details HTML (for Grab events) */
-  releaseDetails: string
+  /** Indexer details as JSON array */
+  indexerDetailsJSON: string
+  /** Release details as JSON array (for Grab events) */
+  releaseDetailsJSON: string
   /** Application URL (from webhook payload, not displayed in template) */
   applicationUrl: string
 }
@@ -64,8 +64,8 @@ export async function prepareProwlarrTemplateVariables(payload: ProwlarrWebhookP
     protocol,
     statusChange,
     message,
-    indexerDetails,
-    releaseDetails,
+    indexerDetailsJSON: JSON.stringify(indexerDetails),
+    releaseDetailsJSON: JSON.stringify(releaseDetails),
     applicationUrl,
   }
 }
@@ -107,90 +107,90 @@ function formatStatusChange(payload: ProwlarrWebhookPayload): string {
 }
 
 /**
- * Format release details as HTML for template
+ * Format release details as data array for template
  * @param release Release information from Prowlarr
- * @returns HTML string with release details
+ * @returns Array of release detail objects with label and value
  */
-function formatReleaseDetails(release?: ProwlarrRelease): string {
+function formatReleaseDetails(release?: ProwlarrRelease): Array<{ label: string; value: string }> {
   if (!release) {
-    return ''
+    return []
   }
 
-  const items: string[] = []
+  const items: Array<{ label: string; value: string }> = []
 
   const qualityName = release.quality?.quality?.name
   const qualitySource = release.quality?.quality?.source
   const resolution = release.quality?.quality?.resolution
   if (qualityName || qualitySource || resolution) {
     const qualityText = [qualityName, qualitySource, resolution && `${resolution}p`].filter(Boolean).join(' / ')
-    items.push(`<div class="stack-item">Quality: ${escapeHtml(qualityText)}</div>`)
+    items.push({ label: 'Quality', value: qualityText })
   }
 
   if (release.releaseTitle) {
-    items.push(`<div class="stack-item">Title: ${escapeHtml(release.releaseTitle)}</div>`)
+    items.push({ label: 'Title', value: release.releaseTitle })
   }
 
   if (release.releaseGroup) {
-    items.push(`<div class="stack-item">Release Group: ${escapeHtml(release.releaseGroup)}</div>`)
+    items.push({ label: 'Release Group', value: release.releaseGroup })
   }
 
   const size = formatFileSize(release.size)
   if (size) {
-    items.push(`<div class="stack-item">Size: ${escapeHtml(size)}</div>`)
+    items.push({ label: 'Size', value: size })
   }
 
   if (release.indexer) {
-    items.push(`<div class="stack-item">Indexer: ${escapeHtml(release.indexer)}</div>`)
+    items.push({ label: 'Indexer', value: release.indexer })
   }
 
   if (release.downloadClient || release.downloadClientName) {
-    items.push(`<div class="stack-item">Download Client: ${escapeHtml(release.downloadClientName ?? release.downloadClient ?? '')}</div>`)
+    items.push({ label: 'Download Client', value: release.downloadClientName ?? release.downloadClient ?? '' })
   }
 
-  return items.join('')
+  return items
 }
 
 /**
- * Format indexer details as HTML for template
+ * Format indexer details as data array for template
  * @param indexer Indexer information from Prowlarr
- * @returns HTML string with indexer details
+ * @returns Array of indexer detail objects with label and value
  */
-function formatIndexerDetails(indexer?: ProwlarrIndexer): string {
+function formatIndexerDetails(indexer?: ProwlarrIndexer): Array<{ label: string; value: string }> {
   if (!indexer) {
-    return ''
+    return []
   }
 
-  const items: string[] = []
+  const items: Array<{ label: string; value: string }> = []
 
   if (indexer.protocol) {
-    items.push(`<div class="stack-item">Protocol: ${escapeHtml(indexer.protocol)}</div>`)
+    items.push({ label: 'Protocol', value: indexer.protocol })
   }
 
   if (typeof indexer.priority === 'number') {
-    items.push(`<div class="stack-item">Priority: ${escapeHtml(String(indexer.priority))}</div>`)
+    items.push({ label: 'Priority', value: String(indexer.priority) })
   }
 
   if (typeof indexer.enableRss === 'boolean') {
-    items.push(`<div class="stack-item">RSS: ${indexer.enableRss ? 'Enabled' : 'Disabled'}</div>`)
+    items.push({ label: 'RSS', value: indexer.enableRss ? 'Enabled' : 'Disabled' })
   }
 
   if (typeof indexer.enableAutomaticSearch === 'boolean') {
-    items.push(`<div class="stack-item">Automatic Search: ${indexer.enableAutomaticSearch ? 'Enabled' : 'Disabled'}</div>`)
+    items.push({ label: 'Automatic Search', value: indexer.enableAutomaticSearch ? 'Enabled' : 'Disabled' })
   }
 
   if (typeof indexer.enableInteractiveSearch === 'boolean') {
-    items.push(`<div class="stack-item">Interactive Search: ${indexer.enableInteractiveSearch ? 'Enabled' : 'Disabled'}</div>`)
+    items.push({ label: 'Interactive Search', value: indexer.enableInteractiveSearch ? 'Enabled' : 'Disabled' })
   }
 
   if (indexer.fields && indexer.fields.length > 0) {
     const fieldItems = indexer.fields
       .filter((field) => field.name && field.value)
-      .map((field) => `${escapeHtml(field.name!)}: ${escapeHtml(field.value!)}`)
+      .map((field) => `${field.name!}: ${field.value!}`)
       .join(', ')
     if (fieldItems) {
-      items.push(`<div class="stack-item">Fields: ${fieldItems}</div>`)
+      items.push({ label: 'Fields', value: fieldItems })
     }
   }
 
-  return items.join('')
+  return items
 }

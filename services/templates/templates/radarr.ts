@@ -8,7 +8,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
     name: 'Radarr - Test',
     description: 'Template for Radarr test notifications',
     html: radarrDefault,
-    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetailsJSON', 'coverImage', 'synopsis', 'detailUrl'],
     defaultVariables: {
       movieTitle: 'Test Movie',
       eventType: 'Test',
@@ -17,7 +17,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
       instanceName: 'radarr-uplink',
       downloadClient: 'qBittorrent · Auto',
       isUpgrade: 'No',
-      releaseDetails: '',
+      releaseDetailsJSON: JSON.stringify([]),
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'This is a test notification from Radarr to verify webhook connectivity.',
       detailUrl: 'https://www.themoviedb.org',
@@ -28,7 +28,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
     name: 'Radarr - Grab',
     description: 'Template for Radarr grab notifications',
     html: radarrDefault,
-    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetailsJSON', 'coverImage', 'synopsis', 'detailUrl'],
     defaultVariables: {
       movieTitle: 'Dune: Part Two',
       eventType: 'Grab',
@@ -37,8 +37,12 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
       instanceName: 'radarr-uplink',
       downloadClient: 'qBittorrent · Auto',
       isUpgrade: 'No',
-      releaseDetails:
-        '<div class="stack-item">Quality: 2160p WEB-DL</div><div class="stack-item">Title: Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.HDR.HEVC</div><div class="stack-item">Indexer: RARBG</div><div class="stack-item">Size: 18.5 GB</div>',
+      releaseDetailsJSON: JSON.stringify([
+        { label: 'Quality', value: '2160p WEB-DL' },
+        { label: 'Title', value: 'Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.HDR.HEVC' },
+        { label: 'Indexer', value: 'RARBG' },
+        { label: 'Size', value: '18.5 GB' },
+      ]),
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
       detailUrl: 'https://www.themoviedb.org/movie/693134-dune-part-two',
@@ -49,7 +53,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
     name: 'Radarr - Download',
     description: 'Template for Radarr download complete notifications',
     html: radarrDefault,
-    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetailsJSON', 'coverImage', 'synopsis', 'detailUrl'],
     defaultVariables: {
       movieTitle: 'Dune: Part Two',
       eventType: 'Download',
@@ -58,8 +62,11 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
       instanceName: 'radarr-uplink',
       downloadClient: 'qBittorrent · Auto',
       isUpgrade: 'No',
-      releaseDetails:
-        '<div class="stack-item">Quality: 2160p WEB-DL Dolby Vision</div><div class="stack-item">Release Group: TERMiNAL</div><div class="stack-item">Size: 18.5 GB</div>',
+      releaseDetailsJSON: JSON.stringify([
+        { label: 'Quality', value: '2160p WEB-DL Dolby Vision' },
+        { label: 'Release Group', value: 'TERMiNAL' },
+        { label: 'Size', value: '18.5 GB' },
+      ]),
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
       detailUrl: 'https://www.themoviedb.org/movie/693134-dune-part-two',
@@ -70,7 +77,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
     name: 'Radarr - Upgrade',
     description: 'Template for Radarr upgrade notifications',
     html: radarrDefault,
-    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetailsJSON', 'coverImage', 'synopsis', 'detailUrl'],
     defaultVariables: {
       movieTitle: 'Dune: Part Two',
       eventType: 'Upgrade',
@@ -79,8 +86,11 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
       instanceName: 'radarr-uplink',
       downloadClient: 'NZBGet · ArrAuto',
       isUpgrade: 'Yes',
-      releaseDetails:
-        '<div class="stack-item">Quality: 2160p REMUX HEVC HDR10+</div><div class="stack-item">Release Group: TERMiNAL</div><div class="stack-item">Size: 82.7 GB</div>',
+      releaseDetailsJSON: JSON.stringify([
+        { label: 'Quality', value: '2160p REMUX HEVC HDR10+' },
+        { label: 'Release Group', value: 'TERMiNAL' },
+        { label: 'Size', value: '82.7 GB' },
+      ]),
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
       detailUrl: 'https://www.themoviedb.org/movie/693134-dune-part-two',
@@ -91,7 +101,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
     name: 'Radarr - Movie Delete',
     description: 'Template for Radarr movie delete notifications',
     html: radarrDefault,
-    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetailsJSON', 'coverImage', 'synopsis', 'detailUrl'],
     defaultVariables: {
       movieTitle: 'The Matrix',
       eventType: 'MovieDelete',
@@ -100,7 +110,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
       instanceName: 'radarr-uplink',
       downloadClient: '',
       isUpgrade: 'No',
-      releaseDetails: '',
+      releaseDetailsJSON: JSON.stringify([]),
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'A computer hacker learns about the true nature of reality and his role in the war against its controllers.',
       detailUrl: 'https://www.themoviedb.org/movie/603-the-matrix',
@@ -111,7 +121,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
     name: 'Radarr - Movie File Delete',
     description: 'Template for Radarr movie file delete notifications',
     html: radarrDefault,
-    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetails', 'coverImage', 'synopsis', 'detailUrl'],
+    variables: ['movieTitle', 'eventType', 'actionLabel', 'year', 'instanceName', 'downloadClient', 'isUpgrade', 'releaseDetailsJSON', 'coverImage', 'synopsis', 'detailUrl'],
     defaultVariables: {
       movieTitle: 'Inception',
       eventType: 'MovieFileDelete',
@@ -120,7 +130,7 @@ export const radarrTemplates: EmailTemplateDefinition[] = [
       instanceName: 'radarr-uplink',
       downloadClient: '',
       isUpgrade: 'No',
-      releaseDetails: '',
+      releaseDetailsJSON: JSON.stringify([]),
       coverImage: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=960&q=80',
       synopsis: 'A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea.',
       detailUrl: 'https://www.themoviedb.org/movie/27205-inception',

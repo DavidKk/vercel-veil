@@ -69,8 +69,8 @@ export const POST = api(async (req: NextRequest) => {
     protocol: variables.protocol,
     statusChange: variables.statusChange,
     message: variables.message,
-    indexerDetails: variables.indexerDetails,
-    releaseDetails: variables.releaseDetails,
+    indexerDetailsJSON: variables.indexerDetailsJSON,
+    releaseDetailsJSON: variables.releaseDetailsJSON,
     applicationUrl: variables.applicationUrl,
   }
 
