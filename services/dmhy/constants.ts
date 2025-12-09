@@ -15,8 +15,8 @@ export const RSS_HEADERS = {
  * Cache duration constants
  */
 export const DMHY_CACHE = {
-  /** Cache duration: 7 days (1 week) */
-  DURATION: 7 * 24 * 60 * 60 * 1000,
+  /** Cache duration: 1 minute (short-lived to avoid rate limits) */
+  DURATION: 60 * 1000,
 } as const
 
 /**

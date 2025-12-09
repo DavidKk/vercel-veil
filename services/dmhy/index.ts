@@ -3,63 +3,8 @@ import { XMLParser } from 'fast-xml-parser'
 import { fetchWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 
-import { DMHY_CACHE, DMHY_RSS_BASE_URL, EPISODE_PATTERNS, RSS_HEADERS } from './constants'
-import type { DMHYCacheEntry, DMHYRSSDTO, ParsedDMHYItem } from './types'
-
-/**
- * In-memory cache for DMHY RSS data
- */
-const cache = new Map<string, DMHYCacheEntry>()
-
-/**
- * Clear cache (for testing purposes)
- */
-export function clearDMHYCache(): void {
-  cache.clear()
-}
-
-/**
- * Check if today is Monday (day of week = 1)
- */
-function isMonday(): boolean {
-  const today = new Date()
-  return today.getDay() === 1
-}
-
-/**
- * Get current day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
- */
-function getDayOfWeek(): number {
-  return new Date().getDay()
-}
-
-/**
- * Check if cache needs update (Monday or cache expired)
- */
-function shouldUpdateCache(cacheEntry: DMHYCacheEntry | null | undefined): boolean {
-  if (!cacheEntry) {
-    return true
-  }
-
-  const now = Date.now()
-  const isExpired = now - cacheEntry.timestamp >= DMHY_CACHE.DURATION
-
-  // Update on Monday or if cache expired
-  const isMondayToday = isMonday()
-  const wasUpdatedOnMonday = cacheEntry.lastUpdateDay === 1
-
-  // If today is Monday and last update was not on Monday, update
-  if (isMondayToday && !wasUpdatedOnMonday) {
-    return true
-  }
-
-  // If cache expired, update
-  if (isExpired) {
-    return true
-  }
-
-  return false
-}
+import { DMHY_RSS_BASE_URL, EPISODE_PATTERNS, RSS_HEADERS } from './constants'
+import type { DMHYRSSDTO, ParsedDMHYItem } from './types'
 
 /**
  * Extract episode number from title
@@ -253,40 +198,12 @@ function buildDMHYRSSUrl(keyword?: string): string {
  */
 export async function getDMHYRSSData(keyword?: string): Promise<ParsedDMHYItem[]> {
   const url = buildDMHYRSSUrl(keyword)
-  const cacheKey = keyword || 'all'
-
-  const cacheEntry = cache.get(cacheKey)
-  const needsUpdate = shouldUpdateCache(cacheEntry)
-
-  if (cacheEntry && !needsUpdate) {
-    info(`DMHY cache hit for keyword "${cacheKey}": ${cacheEntry.items.length} items`)
-    return cacheEntry.items
-  }
-
-  info(`DMHY cache miss or expired for keyword "${cacheKey}", fetching RSS from: ${url}`)
+  info(`Fetching DMHY RSS (no local cache) for keyword "${keyword ?? 'all'}": ${url}`)
 
   try {
-    const items = await fetchDMHYRSS(url)
-
-    // Update cache
-    const newCacheEntry: DMHYCacheEntry = {
-      items,
-      timestamp: Date.now(),
-      lastUpdateDay: getDayOfWeek(),
-    }
-
-    cache.set(cacheKey, newCacheEntry)
-    info(`DMHY cache updated for keyword "${cacheKey}": ${items.length} items`)
-
-    return items
+    return await fetchDMHYRSS(url)
   } catch (error) {
     fail(`Failed to fetch DMHY RSS:`, error)
-
-    // Return cached data if available, even if expired
-    if (cacheEntry) {
-      warn('Using expired cache due to fetch error')
-      return cacheEntry.items
-    }
 
     // Distinguish between network errors and HTTP errors
     const errorMessage = error instanceof Error ? error.message : String(error)

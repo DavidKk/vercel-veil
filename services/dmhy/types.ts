@@ -51,12 +51,3 @@ export interface ParsedDMHYItem {
   author?: string
   category?: string
 }
-
-/**
- * DMHY cache entry
- */
-export interface DMHYCacheEntry {
-  items: ParsedDMHYItem[]
-  timestamp: number
-  lastUpdateDay: number // 0-6, 0 = Sunday, 1 = Monday
-}

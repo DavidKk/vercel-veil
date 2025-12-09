@@ -10,7 +10,7 @@ jest.mock('@/services/fetch', () => ({
   fetchWithCache: jest.fn(),
 }))
 
-import { clearDMHYCache, getDMHYRSSData, searchByEpisode, searchByQuery } from '@/services/dmhy'
+import { getDMHYRSSData, searchByEpisode, searchByQuery } from '@/services/dmhy'
 import { DMHY_RSS_BASE_URL } from '@/services/dmhy/constants'
 import { fetchWithCache } from '@/services/fetch'
 
@@ -51,7 +51,6 @@ describe('services/dmhy', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.useRealTimers()
-    clearDMHYCache() // Clear cache before each test
     ;(fetchWithCache as jest.Mock).mockClear()
   })
 
@@ -140,7 +139,7 @@ describe('services/dmhy', () => {
       await expect(getDMHYRSSData(mockKeyword)).rejects.toThrow('HTTP error! Status: 404')
     })
 
-    it('should cache RSS data by keyword', async () => {
+    it('should return same data for repeated keyword within fetch cache window', async () => {
       const encoder = new TextEncoder()
       const buffer = encoder.encode(mockRSSXML).buffer
 
@@ -148,11 +147,10 @@ describe('services/dmhy', () => {
 
       // First call
       const result1 = await getDMHYRSSData(mockKeyword)
-      expect(fetchWithCache).toHaveBeenCalledTimes(1)
 
-      // Second call should use DMHY cache (not fetchWithCache)
+      // Second call should reuse fetchWithCache internal cache (but mocked still called)
       const result2 = await getDMHYRSSData(mockKeyword)
-      expect(fetchWithCache).toHaveBeenCalledTimes(1) // Still 1, DMHY cache is used
+      expect(fetchWithCache).toHaveBeenCalledTimes(2)
       expect(result2).toEqual(result1)
     })
 
@@ -171,28 +169,16 @@ describe('services/dmhy', () => {
       expect(fetchWithCache).toHaveBeenCalledTimes(2)
     })
 
-    it('should update cache when expired', async () => {
-      jest.useFakeTimers()
-      const now = Date.now()
-      jest.setSystemTime(now)
+    it('should fetch again on subsequent requests (handled by fetchWithCache)', async () => {
       const encoder = new TextEncoder()
       const buffer = encoder.encode(mockRSSXML).buffer
 
       ;(fetchWithCache as jest.Mock).mockResolvedValueOnce(buffer).mockResolvedValueOnce(buffer)
 
-      // First call
       await getDMHYRSSData(mockKeyword)
-      expect(fetchWithCache).toHaveBeenCalledTimes(1)
 
-      // Move time forward by 8 days (more than 7 days cache duration)
-      const futureTime = now + 8 * 24 * 60 * 60 * 1000
-      jest.setSystemTime(futureTime)
-
-      // Should fetch again when cache expired
       await getDMHYRSSData(mockKeyword)
       expect(fetchWithCache).toHaveBeenCalledTimes(2)
-
-      jest.useRealTimers()
     })
   })
 
