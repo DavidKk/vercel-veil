@@ -11,6 +11,16 @@ export interface RadarrMovie {
   year?: number
   tmdbId?: number
   imdbId?: string
+  tvdbId?: number
+  // Optional image fields that may be included in webhook payload
+  // Radarr webhook images: coverType (poster/fanart), url (may be local or remote), remoteUrl (full URL if available)
+  images?: Array<{
+    coverType?: string
+    url?: string
+    remoteUrl?: string
+  }>
+  poster?: string
+  fanart?: string
 }
 
 export interface RadarrQuality {

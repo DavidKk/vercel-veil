@@ -1,5 +1,5 @@
 import { fail } from '@/services/logger'
-import { searchMulti } from '@/services/tmdb'
+import { getMovieDetails, searchMulti } from '@/services/tmdb'
 import { hasTmdbApiKey } from '@/services/tmdb/env'
 import { escapeHtml, formatFileSize } from '@/utils/webhooks/format'
 
@@ -134,8 +134,9 @@ function formatReleaseDetails(release?: RadarrRelease): Array<{ label: string; v
 
 /**
  * Fetch movie metadata (cover image, synopsis, detail URL) from TMDB
+ * Prioritizes using payload images and direct ID lookup over search
  * @param payload Radarr webhook payload
- * @param movieTitle Movie title to search for
+ * @param movieTitle Movie title to search for (fallback if no ID available)
  * @returns Movie metadata including cover image, synopsis, and detail URL
  */
 async function getMovieMetadata(
@@ -150,32 +151,97 @@ async function getMovieMetadata(
   let synopsis = payload.movie?.overview ?? ''
   let detailUrl = ''
 
-  if (payload.movie?.tmdbId) {
-    detailUrl = `https://www.themoviedb.org/movie/${payload.movie.tmdbId}`
+  // Priority 0: Check if payload already contains images
+  // Radarr webhook images array contains: coverType (poster/fanart), url (may be local or remote)
+  if (payload.movie?.images && Array.isArray(payload.movie.images)) {
+    const poster = payload.movie.images.find((img) => img.coverType === 'poster' || img.coverType === 'posters')
+    const fanart = payload.movie.images.find((img) => img.coverType === 'fanart' || img.coverType === 'backgrounds')
+    // Prefer remoteUrl (full URL) over url (may be local path)
+    if (poster?.remoteUrl) {
+      coverImage = poster.remoteUrl
+    } else if (poster?.url && !poster.url.startsWith('/')) {
+      // Only use url if it's not a local path
+      coverImage = poster.url
+    } else if (fanart?.remoteUrl) {
+      coverImage = fanart.remoteUrl
+    } else if (fanart?.url && !fanart.url.startsWith('/')) {
+      coverImage = fanart.url
+    }
+  } else if (payload.movie?.poster) {
+    coverImage = payload.movie.poster
+  } else if (payload.movie?.fanart) {
+    coverImage = payload.movie.fanart
   }
 
-  if (hasTmdbApiKey()) {
+  // Priority 1: Use Radarr's tmdbId if available (most accurate)
+  if (payload.movie?.tmdbId && hasTmdbApiKey()) {
+    try {
+      const language = process.env.TMDB_LANGUAGE ?? 'zh-CN'
+      const movieDetails = await getMovieDetails(payload.movie.tmdbId, language)
+      if (movieDetails) {
+        detailUrl = `https://www.themoviedb.org/movie/${payload.movie.tmdbId}`
+
+        // Use poster from TMDB if not already set from payload
+        if (!coverImage || coverImage.includes('unsplash.com')) {
+          if (movieDetails.poster_path) {
+            coverImage = `https://image.tmdb.org/t/p/w780${movieDetails.poster_path}`
+          } else if (movieDetails.backdrop_path) {
+            coverImage = `https://image.tmdb.org/t/p/w780${movieDetails.backdrop_path}`
+          }
+        }
+
+        // Use overview from TMDB if not already set
+        if (!synopsis && movieDetails.overview) {
+          synopsis = movieDetails.overview
+        }
+
+        // If we got everything from TMDB, return early
+        if (coverImage && !coverImage.includes('unsplash.com') && synopsis) {
+          return {
+            coverImage,
+            synopsis,
+            detailUrl,
+          }
+        }
+      }
+    } catch (error) {
+      fail(`Failed to fetch movie by TMDB ID ${payload.movie.tmdbId}:`, error)
+    }
+  }
+
+  // Priority 2: Fallback to search if we don't have complete information
+  if ((!coverImage || coverImage.includes('unsplash.com') || !synopsis) && hasTmdbApiKey()) {
     try {
       const language = process.env.TMDB_LANGUAGE ?? 'zh-CN'
       const results = await searchMulti(movieTitle, { language })
       if (results && results.length > 0) {
         const movieResult = results.find((r) => r.media_type === 'movie') ?? results[0]
 
-        if (movieResult.poster_path) {
-          coverImage = `https://image.tmdb.org/t/p/w780${movieResult.poster_path}`
+        // Use poster from search if not already set
+        if (!coverImage || coverImage.includes('unsplash.com')) {
+          if (movieResult.poster_path) {
+            coverImage = `https://image.tmdb.org/t/p/w780${movieResult.poster_path}`
+          }
         }
 
-        if (movieResult.overview) {
+        // Use overview from search if not already set
+        if (!synopsis && movieResult.overview) {
           synopsis = movieResult.overview
         }
 
-        if (movieResult.id && movieResult.media_type === 'movie') {
+        // Set detail URL if not already set
+        if (!detailUrl && movieResult.id && movieResult.media_type === 'movie') {
           detailUrl = `https://www.themoviedb.org/movie/${movieResult.id}`
         }
       }
     } catch (error) {
       fail('Failed to fetch movie metadata from TMDB:', error)
     }
+  }
+
+  // Set detail URL from tmdbId if available but not set yet
+  if (!detailUrl && payload.movie?.tmdbId) {
+    detailUrl = `https://www.themoviedb.org/movie/${payload.movie.tmdbId}`
   }
 
   return {

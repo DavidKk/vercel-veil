@@ -1,8 +1,10 @@
 import { fail } from '@/services/logger'
-import { searchByTitle as searchTVDB } from '@/services/thetvdb'
+import { getSeriesById, searchByTitle as searchTVDB } from '@/services/thetvdb'
 import { hasTheTvdbApiKey } from '@/services/thetvdb/env'
+import type { Movie } from '@/services/thetvdb/types'
 import { searchMulti } from '@/services/tmdb'
 import { hasTmdbApiKey } from '@/services/tmdb/env'
+import type { SearchResult } from '@/services/tmdb/types'
 import { escapeHtml, formatEpisodeCode, formatFileSize } from '@/utils/webhooks/format'
 
 import type { SonarrRelease, SonarrWebhookPayload } from './types'
@@ -145,7 +147,83 @@ function formatReleaseDetails(release?: SonarrRelease): Array<{ label: string; v
 }
 
 /**
+ * Check if a series is live-action based on overview text
+ * @param overview Series overview/synopsis text
+ * @returns true if appears to be live-action
+ */
+function isLiveAction(overview: string): boolean {
+  if (!overview) {
+    return false
+  }
+  const lowerOverview = overview.toLowerCase()
+  const liveActionKeywords = ['live-action', 'live action', '真人版', '真人', '実写', '実写版']
+  return liveActionKeywords.some((keyword) => lowerOverview.includes(keyword))
+}
+
+/**
+ * Filter TheTVDB search results to prefer anime/animation over live-action
+ * @param results TheTVDB search results
+ * @returns Filtered results, prioritizing non-live-action series
+ */
+function filterTheTVDBResults(results: Movie[]): Movie[] {
+  if (!results || results.length === 0) {
+    return []
+  }
+
+  // Priority 1: Filter by type (prefer 'series' over 'movie')
+  const seriesResults = results.filter((r) => r.type === 'series')
+  if (seriesResults.length === 0) {
+    return results
+  }
+
+  // Priority 2: Filter out live-action based on overview
+  const nonLiveActionResults = seriesResults.filter((r) => {
+    const overview = r.overview || ''
+    const overviews = r.overviews || {}
+    // Check default overview and all language overviews
+    const allOverviews = [overview, ...Object.values(overviews)].join(' ')
+    return !isLiveAction(allOverviews)
+  })
+
+  // If we have non-live-action results, return them; otherwise return all series results
+  return nonLiveActionResults.length > 0 ? nonLiveActionResults : seriesResults
+}
+
+/**
+ * Filter TMDB search results to prefer anime/animation over live-action
+ * @param results TMDB search results
+ * @returns Filtered results, prioritizing non-live-action TV series
+ */
+function filterTMDBResults(results: SearchResult[]): SearchResult[] {
+  if (!results || results.length === 0) {
+    return []
+  }
+
+  // Priority 1: Filter by media_type (prefer 'tv' over 'movie')
+  const tvResults = results.filter((r) => r.media_type === 'tv')
+  if (tvResults.length === 0) {
+    return results
+  }
+
+  // Priority 2: Prefer Animation genre (ID 16) - anime content
+  const animationResults = tvResults.filter((r) => r.genre_ids && r.genre_ids.includes(16))
+  if (animationResults.length > 0) {
+    // Further filter out live-action from animation results
+    const nonLiveActionAnimation = animationResults.filter((r) => !isLiveAction(r.overview || ''))
+    if (nonLiveActionAnimation.length > 0) {
+      return nonLiveActionAnimation
+    }
+    return animationResults
+  }
+
+  // Priority 3: Filter out live-action from all TV results
+  const nonLiveActionResults = tvResults.filter((r) => !isLiveAction(r.overview || ''))
+  return nonLiveActionResults.length > 0 ? nonLiveActionResults : tvResults
+}
+
+/**
  * Fetch series metadata (cover image, synopsis, detail URL) from TheTVDB or TMDB
+ * Filters out live-action content to prefer anime/animation
  * @param payload Sonarr webhook payload
  * @param seriesTitle Series title to search for
  * @returns Series metadata including cover image, synopsis, and detail URL
@@ -162,8 +240,61 @@ async function getSeriesMetadata(
   let synopsis = ''
   let detailUrl = ''
 
-  if (payload.series?.tvdbId) {
-    detailUrl = `https://www.thetvdb.com/series/${payload.series.tvdbId}`
+  // Priority 0: Check if payload already contains images
+  // Sonarr webhook images array contains: coverType (poster/fanart/banner), url (local), remoteUrl (remote)
+  if (payload.series?.images && Array.isArray(payload.series.images)) {
+    const poster = payload.series.images.find((img) => img.coverType === 'poster' || img.coverType === 'posters')
+    const fanart = payload.series.images.find((img) => img.coverType === 'fanart' || img.coverType === 'backgrounds')
+    // Prefer remoteUrl (full URL) over url (local path)
+    if (poster?.remoteUrl) {
+      coverImage = poster.remoteUrl
+    } else if (poster?.url && !poster.url.startsWith('/')) {
+      // Only use url if it's not a local path
+      coverImage = poster.url
+    } else if (fanart?.remoteUrl) {
+      coverImage = fanart.remoteUrl
+    } else if (fanart?.url && !fanart.url.startsWith('/')) {
+      coverImage = fanart.url
+    }
+  } else if (payload.series?.poster) {
+    coverImage = payload.series.poster
+  } else if (payload.series?.fanart) {
+    coverImage = payload.series.fanart
+  }
+
+  // Priority 1: Use Sonarr's tvdbId if available (most accurate)
+  if (payload.series?.tvdbId && hasTheTvdbApiKey()) {
+    try {
+      const seriesInfo = await getSeriesById(String(payload.series.tvdbId))
+      if (seriesInfo) {
+        detailUrl = `https://www.thetvdb.com/series/${payload.series.tvdbId}`
+
+        // Use image from TheTVDB if not already set from payload
+        if (!coverImage || coverImage.includes('unsplash.com')) {
+          if (seriesInfo.imageUrl) {
+            coverImage = seriesInfo.imageUrl
+          }
+        }
+
+        // Use overview from TheTVDB
+        if (seriesInfo.overviews) {
+          synopsis = seriesInfo.overviews['zh-CN'] || seriesInfo.overviews['zh'] || seriesInfo.overviews['zh-Hans'] || seriesInfo.overviews['zh-Hant'] || seriesInfo.overview || ''
+        } else if (seriesInfo.overview) {
+          synopsis = seriesInfo.overview
+        }
+
+        // If we got everything from TheTVDB, return early
+        if (coverImage && !coverImage.includes('unsplash.com') && synopsis) {
+          return {
+            coverImage,
+            synopsis,
+            detailUrl,
+          }
+        }
+      }
+    } catch (error) {
+      fail(`Failed to fetch series by TVDB ID ${payload.series.tvdbId}:`, error)
+    }
   }
 
   if (hasTheTvdbApiKey()) {
@@ -171,7 +302,9 @@ async function getSeriesMetadata(
       const language = process.env.THE_TVDB_LANGUAGE ?? 'zh-CN'
       const results = await searchTVDB(seriesTitle, { language })
       if (results && results.length > 0) {
-        const seriesResult = results[0]
+        // Filter results to prefer anime over live-action
+        const filteredResults = filterTheTVDBResults(results)
+        const seriesResult = filteredResults[0] || results[0]
 
         if (seriesResult.image_url) {
           coverImage = seriesResult.image_url
@@ -199,7 +332,9 @@ async function getSeriesMetadata(
       const language = process.env.TMDB_LANGUAGE ?? 'zh-CN'
       const results = await searchMulti(seriesTitle, { language })
       if (results && results.length > 0) {
-        const tvResult = results.find((r) => r.media_type === 'tv') ?? results[0]
+        // Filter results to prefer anime over live-action
+        const filteredResults = filterTMDBResults(results)
+        const tvResult = filteredResults[0] || results.find((r) => r.media_type === 'tv') || results[0]
 
         if (tvResult.poster_path) {
           coverImage = `https://image.tmdb.org/t/p/w780${tvResult.poster_path}`

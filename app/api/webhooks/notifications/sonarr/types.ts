@@ -7,6 +7,15 @@ export interface SonarrSeries {
   path?: string
   tvdbId?: number
   imdbId?: string
+  // Optional image fields that may be included in webhook payload
+  // Sonarr webhook images: coverType (poster/fanart/banner), url (local path), remoteUrl (full URL)
+  images?: Array<{
+    coverType?: string
+    url?: string
+    remoteUrl?: string
+  }>
+  poster?: string
+  fanart?: string
 }
 
 export interface SonarrEpisode {

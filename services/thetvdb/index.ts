@@ -22,18 +22,34 @@ export interface SeriesResponse {
     slug: string
     image?: string
     nameTranslations?: string[]
-    overviewTranslations?: string[]
+    overviewTranslations?: string[] | Record<string, string>
+    artworks?: Array<{
+      id: number
+      type: string
+      url: string
+      language?: string
+      score?: number
+    }>
+    overview?: string
     [key: string]: any
   }
+}
+
+export interface SeriesInfo {
+  name: string
+  translations?: Record<string, string>
+  imageUrl?: string
+  overview?: string
+  overviews?: Record<string, string>
 }
 
 /**
  * Get TV series information by TheTVDB ID
  * @param seriesId TheTVDB series ID
  * @param options Options for fetching series
- * @returns Series information or null if not found
+ * @returns Series information including name, translations, image, and overview, or null if not found
  */
-export async function getSeriesById(seriesId: string, options: SearchOptions = {}): Promise<{ name: string; translations?: Record<string, string> } | null> {
+export async function getSeriesById(seriesId: string, options: SearchOptions = {}): Promise<SeriesInfo | null> {
   const token = await getAccessToken()
   const language = options.language ?? process.env.THE_TVDB_LANGUAGE ?? 'zh-CN'
 
@@ -66,7 +82,7 @@ export async function getSeriesById(seriesId: string, options: SearchOptions = {
     }
 
     const series = json.data
-    const result: { name: string; translations?: Record<string, string> } = {
+    const result: SeriesInfo = {
       name: series.name,
     }
 
@@ -83,6 +99,38 @@ export async function getSeriesById(seriesId: string, options: SearchOptions = {
             result.translations[lang] = name
           }
         }
+      }
+    }
+
+    // Extract image from artworks (prefer poster, then fanart)
+    if (series.artworks && Array.isArray(series.artworks)) {
+      const poster = series.artworks.find((a) => a.type === 'poster' || a.type === 'posters')
+      const fanart = series.artworks.find((a) => a.type === 'fanart' || a.type === 'backgrounds')
+      if (poster?.url) {
+        result.imageUrl = poster.url
+      } else if (fanart?.url) {
+        result.imageUrl = fanart.url
+      } else if (series.image) {
+        result.imageUrl = series.image
+      }
+    } else if (series.image) {
+      result.imageUrl = series.image
+    }
+
+    // Extract overview
+    if (series.overview) {
+      result.overview = series.overview
+    }
+
+    // Extract overview translations
+    // TheTVDB API may return overviewTranslations as an array or object
+    if (series.overviewTranslations && typeof series.overviewTranslations === 'object') {
+      if (Array.isArray(series.overviewTranslations)) {
+        // If it's an array, skip it (structure unknown)
+        // Could potentially parse it if needed
+      } else {
+        // If it's an object, use it as Record<string, string>
+        result.overviews = series.overviewTranslations as Record<string, string>
       }
     }
 
