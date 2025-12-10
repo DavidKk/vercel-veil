@@ -14,7 +14,10 @@ export const HIDDEN_ROUTES = ['/movies', '/anime']
  */
 export const DEFAULT_NAV = {
   notification: [{ name: 'Email', href: '/email' }],
-  feed: [{ name: 'Douban', href: '/feed/douban' }],
+  feed: [
+    { name: 'Douban', href: '/feed/douban' },
+    { name: 'Qishui', href: '/feed/qishui' },
+  ],
   media: [
     { name: 'Movies', href: '/movies' },
     { name: 'Anime', href: '/anime' },
