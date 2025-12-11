@@ -9,8 +9,11 @@ import Alert from '@/components/Alert'
 import LazyImage from '@/components/LazyImage'
 import Tooltip from '@/components/Tooltip'
 import type { MergedMovie } from '@/services/maoyan/types'
+import { judgeMovieHotStatus } from '@/services/movies/popularity'
+import { MovieHotStatus } from '@/services/movies/popularity/types'
 
 import { GenreBadge, MaoyanBadge, RatingBadge, TMDBBadge, WishBadge, YearBadge } from './components/badges'
+import HotStatusBadge from './components/HotStatusBadge'
 import { useFavoriteMovie } from './hooks/useFavoriteMovie'
 import { getMovieDetailUrl, getReleaseInfo, getSourceBadgeText } from './utils/movieHelpers'
 
@@ -37,24 +40,38 @@ export default function MovieCard({ movie, favoriteAvailable, isFavorited: initi
   const detailUrl = getMovieDetailUrl(movie, shareToken)
   const releaseInfo = getReleaseInfo(movie)
 
+  // Check if hot status badge will be shown
+  const hotStatus = judgeMovieHotStatus(movie)
+  const hasHotStatus = hotStatus === MovieHotStatus.HIGHLY_ANTICIPATED || hotStatus === MovieHotStatus.VERY_HOT
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl bg-white/5 backdrop-blur-md shadow-xl ring-1 ring-white/10 transition-all hover:shadow-2xl hover:ring-indigo-400/50 hover:bg-white/10">
       {/* Poster Image - Clickable */}
-      <Link href={detailUrl} className="relative aspect-[2/3] w-full overflow-hidden bg-gray-100 block">
-        <LazyImage src={posterUrl} alt={movie.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+      <Link href={detailUrl} className="relative aspect-[2/3] w-full overflow-hidden block">
+        {/* Gradient wave background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 animate-pulse">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.3),transparent_50%)] opacity-50"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.3),transparent_50%)] opacity-50"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(236,72,153,0.3),transparent_50%)] opacity-50"></div>
+        </div>
+        <LazyImage src={posterUrl} alt={movie.name} className="relative h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
         {/* Release Status Badge */}
         {releaseInfo && (
           <Tooltip content={releaseInfo.formattedDate} position="top">
             <div
-              className={`absolute left-2 top-2 rounded-full px-2 py-1 text-xs font-semibold text-white shadow-lg cursor-pointer ${releaseInfo.isReleased ? 'bg-green-600' : 'bg-orange-600'}`}
+              className={`absolute left-2 top-2 rounded-md px-2 py-1 text-xs font-semibold text-white shadow-lg cursor-pointer ${releaseInfo.isReleased ? 'bg-green-600' : 'bg-orange-600'}`}
             >
               {releaseInfo.isReleased ? 'NOW' : 'SOON'}
             </div>
           </Tooltip>
         )}
-        {/* Source Badge */}
+        {/* Hot Status Badge - Top right */}
+        <HotStatusBadge movie={movie} />
+        {/* Source Badge - Position below hot status badge if it exists, otherwise top right */}
         {sourceBadgeText && (
-          <div className="absolute right-2 top-2 rounded-full bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-lg cursor-pointer">{sourceBadgeText}</div>
+          <div className={`absolute right-2 rounded-md bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-lg cursor-pointer ${hasHotStatus ? 'top-11' : 'top-2'}`}>
+            {sourceBadgeText}
+          </div>
         )}
       </Link>
 

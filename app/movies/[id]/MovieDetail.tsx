@@ -49,7 +49,7 @@ export default function MovieDetail({ movie, favoriteAvailable, favoriteIds, sha
                 {releaseInfo && (
                   <Tooltip content={releaseInfo.formattedDate} position="top">
                     <div
-                      className={`absolute left-2 top-2 lg:left-4 lg:top-4 rounded-full px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-semibold text-white shadow-lg cursor-pointer ${releaseInfo.isReleased ? 'bg-green-600' : 'bg-orange-600'}`}
+                      className={`absolute left-2 top-2 lg:left-4 lg:top-4 rounded-md px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-semibold text-white shadow-lg cursor-pointer ${releaseInfo.isReleased ? 'bg-green-600' : 'bg-orange-600'}`}
                     >
                       {releaseInfo.isReleased ? 'NOW' : 'SOON'}
                     </div>
@@ -57,7 +57,7 @@ export default function MovieDetail({ movie, favoriteAvailable, favoriteIds, sha
                 )}
                 {/* Source Badge */}
                 {sourceBadgeText && (
-                  <div className="absolute right-2 top-2 lg:right-4 lg:top-4 rounded-full bg-indigo-600 px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-semibold text-white shadow-lg cursor-pointer">
+                  <div className="absolute right-2 top-2 lg:right-4 lg:top-4 rounded-md bg-indigo-600 px-2 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-semibold text-white shadow-lg cursor-pointer">
                     {sourceBadgeText}
                   </div>
                 )}
