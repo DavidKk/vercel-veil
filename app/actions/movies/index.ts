@@ -5,6 +5,7 @@ import { fail } from '@/services/logger'
 import { getMergedMoviesList, type GetMergedMoviesListOptions } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
 import { getMoviesListFromCache, getMoviesListWithAutoUpdate } from '@/services/movies'
+import { isRadarrConfigured, syncToRadarrAsync } from '@/services/radarr'
 import { addToFavorites, getFavoriteMovies } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 
@@ -78,6 +79,15 @@ export async function favoriteMovie(movieId: number, favorite = true): Promise<{
   // Catch API errors but log them - these are expected (network issues, API limits, etc.)
   try {
     await addToFavorites(movieId, favorite)
+
+    // If adding to favorites and Radarr is configured, sync to Radarr
+    if (favorite && isRadarrConfigured()) {
+      // Fire and forget - sync to Radarr asynchronously without blocking
+      void syncToRadarrAsync(movieId, true).catch((error) => {
+        // Error already logged in syncToRadarrAsync, just catch to prevent unhandled rejection
+        fail('Radarr sync failed (non-blocking):', error)
+      })
+    }
 
     return {
       success: true,

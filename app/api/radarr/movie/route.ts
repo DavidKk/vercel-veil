@@ -18,7 +18,7 @@ export const runtime = 'nodejs'
 function extractCustomHeaders(req: NextRequest): Record<string, string> {
   const customHeaders: Record<string, string> = {}
   const customHeaderPrefix = 'X-Radarr-'
-  
+
   req.headers.forEach((value, key) => {
     if (key.toLowerCase().startsWith(customHeaderPrefix.toLowerCase())) {
       customHeaders[key] = value
@@ -41,7 +41,7 @@ export const POST = api(async (req: NextRequest) => {
   const customHeaders = extractCustomHeaders(req)
 
   try {
-    const body = await req.json() as RadarrAddMovieRequest
+    const body = (await req.json()) as RadarrAddMovieRequest
 
     // Validate required fields
     if (!body.tmdbId) {
@@ -115,4 +115,3 @@ export const DELETE = api(async (req: NextRequest) => {
     return jsonInvalidParameters(errorMessage)
   }
 })
-

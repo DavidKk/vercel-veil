@@ -71,4 +71,3 @@ export interface RadarrResponse<T = any> {
   data?: T
   error?: RadarrError[]
 }
-

@@ -1,7 +1,7 @@
 import { debug, fail } from '@/services/logger'
 
 import { RADARR } from './constants'
-import type { RadarrError, RadarrResponse } from './types'
+import type { RadarrError } from './types'
 
 function getServerInfo() {
   const RADARR_URL = process.env.RADARR_URL
@@ -39,19 +39,13 @@ function getHeaders(customHeaders?: Record<string, string>): HeadersInit {
  * @param customHeaders Custom headers to add to the request
  * @returns Radarr API response
  */
-export async function request<T = any>(
-  path: string,
-  init: RequestInit = {},
-  customHeaders?: Record<string, string>
-): Promise<T> {
+export async function request<T = any>(path: string, init: RequestInit = {}, customHeaders?: Record<string, string>): Promise<T> {
   const { baseUrl } = getServerInfo()
   // Clean path but preserve query string if present
   // Split path and query string to handle them separately
   const [pathPart, queryString] = path.trim().split('?')
   const cleanPath = pathPart.replace(/^\/+/, '').replace(/\/+$/, '')
-  const url = queryString 
-    ? `${baseUrl}/api/${RADARR.API_VERSION}/${cleanPath}?${queryString}`
-    : `${baseUrl}/api/${RADARR.API_VERSION}/${cleanPath}`
+  const url = queryString ? `${baseUrl}/api/${RADARR.API_VERSION}/${cleanPath}?${queryString}` : `${baseUrl}/api/${RADARR.API_VERSION}/${cleanPath}`
 
   const headers = getHeaders(customHeaders)
   const method = init.method || 'GET'
@@ -100,4 +94,3 @@ export async function request<T = any>(
   const data = await response.json()
   return data as T
 }
-

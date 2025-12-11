@@ -3,6 +3,7 @@
 import jwt from 'jsonwebtoken'
 
 import { fail, info } from '@/services/logger'
+import { isRadarrConfigured, syncToRadarrAsync } from '@/services/radarr'
 import { addToFavorites } from '@/services/tmdb'
 import { hasTmdbAuth } from '@/services/tmdb/env'
 import { generateShareToken as createShareToken } from '@/utils/jwt'
@@ -122,6 +123,15 @@ export async function favoriteMovieWithToken(movieId: number, token: string, fav
 
     // Add to favorites
     await addToFavorites(movieId, favorite)
+
+    // If adding to favorites and Radarr is configured, sync to Radarr
+    if (favorite && isRadarrConfigured()) {
+      // Fire and forget - sync to Radarr asynchronously without blocking
+      void syncToRadarrAsync(movieId, true).catch((error) => {
+        // Error already logged in syncToRadarrAsync, just catch to prevent unhandled rejection
+        fail('Radarr sync failed (non-blocking):', error)
+      })
+    }
 
     const duration = Date.now() - startTime
     const action = favorite ? 'added to' : 'removed from'

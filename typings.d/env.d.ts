@@ -72,6 +72,10 @@ declare namespace NodeJS {
     RADARR_URL?: string
     /** Radarr API key for authentication */
     RADARR_API_KEY?: string
+    /** Radarr root folder path (optional, will be fetched from API if not set) */
+    RADARR_ROOT_FOLDER_PATH?: string
+    /** Radarr quality profile ID (optional, will be fetched from API if not set) */
+    RADARR_QUALITY_PROFILE_ID?: string
 
     /** Cache configuration */
     /** Enable/disable cache (default: "1" for enabled, "0" for disabled) */

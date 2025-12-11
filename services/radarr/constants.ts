@@ -10,4 +10,3 @@ export const RADARR = {
     Accept: 'application/json',
   } as const,
 } as const
-
