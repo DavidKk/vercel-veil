@@ -20,6 +20,9 @@ export {
 } from './cache'
 export type { MoviesCacheData } from './types'
 
+// Re-export popularity functions
+export { filterHotMovies, isHighlyAnticipated, isHot, isVeryHot, judgeMovieHotStatus, MovieHotStatus } from './popularity'
+
 /**
  * Find existing movie in previous movies list
  * Matching rules: maoyanId > tmdbId > name (lowercase, trimmed)
