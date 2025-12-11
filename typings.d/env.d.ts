@@ -67,6 +67,12 @@ declare namespace NodeJS {
     /** Navidrome password for API authentication */
     NAVIDROME_PASSWORD?: string
 
+    /** Radarr movie server configuration */
+    /** Radarr server URL (e.g. "https://radarr.example.com") */
+    RADARR_URL?: string
+    /** Radarr API key for authentication */
+    RADARR_API_KEY?: string
+
     /** Cache configuration */
     /** Enable/disable cache (default: "1" for enabled, "0" for disabled) */
     CACHE?: string
