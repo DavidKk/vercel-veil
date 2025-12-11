@@ -25,7 +25,7 @@ export const DMHY_CACHE = {
 export const EPISODE_PATTERNS = [
   /\((\d+)\)/g, // (1151)
   /\[(\d+)\]/g, // [1151]
-  /第(\d+)話/g, // 第1151話
-  /第(\d+)话/g, // 第1151话
+  /第(\d+)話/g, // Chinese format: "第1151話"
+  /第(\d+)话/g, // Chinese format: "第1151话"
   /(\d+)/g, // 1151 (fallback, match last number)
 ] as const

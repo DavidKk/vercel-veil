@@ -9,6 +9,7 @@ import LazyImage from '@/components/LazyImage'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import { GenreBadge, MaoyanBadge, RatingBadge, TMDBBadge, WishBadge, YearBadge } from './components/badges'
+import HotStatusBadge from './components/HotStatusBadge'
 import { useFavoriteMovie } from './hooks/useFavoriteMovie'
 
 interface MovieSwipeCardProps {
@@ -43,10 +44,18 @@ export default function MovieSwipeCard({ movie, favoriteAvailable, isFavorited: 
         <div className="flex flex-col gap-4 lg:gap-6 flex-1 px-4 lg:px-6 min-h-0">
           {/* Poster Image */}
           <div
-            className="relative aspect-[2/3] w-full max-w-[220px] lg:max-w-[260px] xl:max-w-[300px] mx-auto overflow-hidden rounded-xl bg-gray-800 shadow-2xl flex-shrink-0 max-h-[55vh]"
+            className="relative aspect-[2/3] w-full max-w-[220px] lg:max-w-[260px] xl:max-w-[300px] mx-auto overflow-hidden rounded-xl shadow-2xl flex-shrink-0 max-h-[55vh]"
             style={{ display: isDetailsExpanded ? 'none' : 'block' }}
           >
-            <LazyImage src={posterUrl} alt={movie.name} className="h-full w-full object-cover" loading="lazy" />
+            {/* Gradient wave background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 animate-pulse">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.3),transparent_50%)] opacity-50"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.3),transparent_50%)] opacity-50"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(236,72,153,0.3),transparent_50%)] opacity-50"></div>
+            </div>
+            <LazyImage src={posterUrl} alt={movie.name} className="relative h-full w-full object-cover" loading="lazy" />
+            {/* Hot Status Badge - Top right */}
+            <HotStatusBadge movie={movie} />
           </div>
 
           {/* Middle section - Movie info */}

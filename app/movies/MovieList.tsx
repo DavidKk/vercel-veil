@@ -6,9 +6,10 @@ import ClearableSelect from '@/components/ClearableSelect'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import MovieCard from './MovieCard'
-import { filterMoviesWithRatingOrWish } from './utils/movieHelpers'
+import { filterMoviesWithRatingOrWish, getReleaseInfo } from './utils/movieHelpers'
 
 type SortOption = 'rating' | 'wish' | ''
+type ReleaseFilter = 'all' | 'released' | 'upcoming'
 
 interface MovieListProps {
   movies: MergedMovie[]
@@ -19,30 +20,82 @@ interface MovieListProps {
 
 export default function MovieList({ movies, favoriteAvailable, favoriteIds, shareToken }: MovieListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('')
+  const [releaseFilter, setReleaseFilter] = useState<ReleaseFilter>('all')
 
   // Filter movies: only keep those with rating or wish data
   const filteredMovies = useMemo(() => filterMoviesWithRatingOrWish(movies), [movies])
 
-  // Sort movies based on selected option
-  const sortedMovies = useMemo(() => {
-    if (!sortBy) {
+  // Filter by release status
+  const releaseFilteredMovies = useMemo(() => {
+    if (releaseFilter === 'all') {
       return filteredMovies
     }
 
-    return [...filteredMovies].sort((a, b) => {
+    return filteredMovies.filter((movie) => {
+      const releaseInfo = getReleaseInfo(movie)
+      if (!releaseInfo) {
+        // If no release date, include in "upcoming" filter, exclude from "released"
+        return releaseFilter === 'upcoming'
+      }
+
+      if (releaseFilter === 'released') {
+        return releaseInfo.isReleased
+      } else if (releaseFilter === 'upcoming') {
+        return !releaseInfo.isReleased
+      }
+
+      return true
+    })
+  }, [filteredMovies, releaseFilter])
+
+  // Sort movies based on selected option
+  const sortedMovies = useMemo(() => {
+    if (!sortBy) {
+      return releaseFilteredMovies
+    }
+
+    return [...releaseFilteredMovies].sort((a, b) => {
       if (sortBy === 'rating') {
         // Use rating (TMDB) or score (Maoyan) as fallback
-        const ratingA = a.rating ?? (a.score ? parseFloat(a.score) : 0)
-        const ratingB = b.rating ?? (b.score ? parseFloat(b.score) : 0)
-        return ratingB - ratingA // Descending order
+        let ratingA = a.rating
+        if (ratingA === undefined || ratingA === null) {
+          if (a.score) {
+            const parsed = parseFloat(a.score)
+            ratingA = isNaN(parsed) ? 0 : parsed
+          } else {
+            ratingA = 0
+          }
+        }
+
+        let ratingB = b.rating
+        if (ratingB === undefined || ratingB === null) {
+          if (b.score) {
+            const parsed = parseFloat(b.score)
+            ratingB = isNaN(parsed) ? 0 : parsed
+          } else {
+            ratingB = 0
+          }
+        }
+
+        // Descending order, if equal, sort by name for stability
+        if (ratingB !== ratingA) {
+          return ratingB - ratingA
+        }
+        return a.name.localeCompare(b.name)
       } else if (sortBy === 'wish') {
-        const wishA = a.wish ?? 0
-        const wishB = b.wish ?? 0
-        return wishB - wishA // Descending order
+        // Use wish (Maoyan) or tmdbVoteCount (TMDB) as fallback, prefer the higher value
+        const wishA = Math.max(a.wish ?? 0, a.tmdbVoteCount ?? 0)
+        const wishB = Math.max(b.wish ?? 0, b.tmdbVoteCount ?? 0)
+
+        // Descending order, if equal, sort by name for stability
+        if (wishB !== wishA) {
+          return wishB - wishA
+        }
+        return a.name.localeCompare(b.name)
       }
       return 0
     })
-  }, [filteredMovies, sortBy])
+  }, [releaseFilteredMovies, sortBy])
 
   if (!sortedMovies || sortedMovies.length === 0) {
     return (
@@ -66,6 +119,21 @@ export default function MovieList({ movies, favoriteAvailable, favoriteIds, shar
               <span className="font-semibold text-white">{sortedMovies.length}</span> movies
             </div>
             <div className="flex items-center gap-3">
+              <label htmlFor="release-filter-select" className="text-sm font-medium text-white">
+                Filter:
+              </label>
+              <ClearableSelect
+                value={releaseFilter}
+                placeholder="All"
+                onChange={(value) => setReleaseFilter((value || 'all') as ReleaseFilter)}
+                options={[
+                  { value: 'all', label: 'All Movies' },
+                  { value: 'released', label: 'Released' },
+                  { value: 'upcoming', label: 'Upcoming' },
+                ]}
+                clearable={false}
+                media={true}
+              />
               <label htmlFor="sort-select" className="text-sm font-medium text-white">
                 Sort by:
               </label>
