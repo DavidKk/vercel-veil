@@ -1,5 +1,5 @@
 import { checkResponseForCloudflareBlocking } from '@/services/cloudflare'
-import { debug, fail } from '@/services/logger'
+import { debug, fail, info } from '@/services/logger'
 import { parseCustomHeaders } from '@/utils/headers'
 
 import { NAVIDROME, NAVIDROME_CACHE } from './constants'
@@ -117,13 +117,13 @@ export async function request(path: string, params: Record<string, string> = {},
 
   debug(`Navidrome API request: ${path}`, { params })
 
-  // Debug: log custom headers if they exist
+  // Log custom headers info (using info instead of debug for Vercel production visibility)
   if (Object.keys(customHeaders).length > 0) {
-    debug(`Navidrome custom headers parsed:`, customHeaders)
+    info(`Navidrome custom headers parsed:`, customHeaders)
   } else if (process.env.NAVIDROME_CUSTOM_HEADERS) {
-    debug(`Navidrome custom headers env var exists but failed to parse:`, process.env.NAVIDROME_CUSTOM_HEADERS)
+    info(`Navidrome custom headers env var exists but failed to parse:`, process.env.NAVIDROME_CUSTOM_HEADERS)
   } else {
-    debug(`Navidrome custom headers env var not set`)
+    info(`Navidrome custom headers env var not set`)
   }
 
   const requestHeaders: HeadersInit = {
@@ -134,9 +134,9 @@ export async function request(path: string, params: Record<string, string> = {},
     ...init.headers,
   }
 
-  // Log all headers except sensitive ones for debugging
+  // Log all headers except sensitive ones for debugging (using info for Vercel production visibility)
   const headerKeys = Object.keys(requestHeaders)
-  debug(`Navidrome request headers (${headerKeys.length} total):`, headerKeys)
+  info(`Navidrome request headers (${headerKeys.length} total):`, headerKeys)
 
   let response: Response
   let errorText = ''
