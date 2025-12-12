@@ -1,3 +1,4 @@
+import { checkResponseForCloudflareBlocking } from '@/services/cloudflare'
 import { debug, fail } from '@/services/logger'
 
 import { RADARR } from './constants'
@@ -61,29 +62,67 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
     },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    let errorMessage = `Radarr API request failed: ${response.status} ${response.statusText}`
+  // Check if response is HTML (unexpected for API) - likely Cloudflare blocking
+  const contentType = response.headers.get('content-type') || ''
+  const isHtml = contentType.toLowerCase().includes('text/html')
+
+  if (!response.ok || response.status > 399 || isHtml) {
+    // Clone response for Cloudflare check (since we need to read body)
+    const responseClone = response.clone()
+    let errorText: string
 
     try {
-      const errorData = JSON.parse(errorText) as RadarrError | RadarrError[]
-      if (Array.isArray(errorData)) {
-        const messages = errorData.map((e) => e.errorMessage || e.propertyName).filter(Boolean)
-        if (messages.length > 0) {
-          errorMessage = `Radarr API error: ${messages.join(', ')}`
-        }
-      } else if (errorData.errorMessage) {
-        errorMessage = `Radarr API error: ${errorData.errorMessage}`
-      }
-    } catch {
-      // If parsing fails, use the raw error text
-      if (errorText) {
-        errorMessage = `Radarr API error: ${errorText}`
-      }
+      errorText = await response.text()
+    } catch (error) {
+      errorText = ''
     }
 
-    fail(errorMessage)
-    throw new Error(errorMessage)
+    // Check if blocked by Cloudflare
+    const cloudflareCheck = await checkResponseForCloudflareBlocking(responseClone, url)
+    if (cloudflareCheck.isBlocked) {
+      const errorMsg = `Radarr API blocked by Cloudflare: ${cloudflareCheck.reason || 'Unknown reason'}`
+      fail(errorMsg, {
+        status: response.status,
+        blockReason: cloudflareCheck.blockReason,
+        indicators: cloudflareCheck.indicators,
+        url,
+        contentType,
+        isHtml,
+      })
+      throw new Error(errorMsg)
+    }
+
+    // If HTML response but not detected as Cloudflare, still suspicious
+    if (isHtml) {
+      const errorMsg = 'Radarr API returned HTML page instead of expected JSON response - Possibly blocked by Cloudflare'
+      fail(errorMsg, { status: response.status, url, contentType })
+      throw new Error(errorMsg)
+    }
+
+    // Not Cloudflare blocking, parse and throw original error
+    if (!response.ok) {
+      let errorMessage = `Radarr API request failed: ${response.status} ${response.statusText}`
+
+      try {
+        const errorData = JSON.parse(errorText) as RadarrError | RadarrError[]
+        if (Array.isArray(errorData)) {
+          const messages = errorData.map((e) => e.errorMessage || e.propertyName).filter(Boolean)
+          if (messages.length > 0) {
+            errorMessage = `Radarr API error: ${messages.join(', ')}`
+          }
+        } else if (errorData.errorMessage) {
+          errorMessage = `Radarr API error: ${errorData.errorMessage}`
+        }
+      } catch {
+        // If parsing fails, use the raw error text
+        if (errorText) {
+          errorMessage = `Radarr API error: ${errorText}`
+        }
+      }
+
+      fail(errorMessage)
+      throw new Error(errorMessage)
+    }
   }
 
   // Handle 204 No Content (common for DELETE requests)
