@@ -29,12 +29,25 @@ function getHeaders(customHeaders?: Record<string, string>): HeadersInit {
   // Parse custom headers from environment variable
   const envCustomHeaders = parseCustomHeaders(process.env.RADARR_CUSTOM_HEADERS)
 
+  // Debug: log custom headers if they exist
+  if (Object.keys(envCustomHeaders).length > 0) {
+    debug(`Radarr custom headers parsed:`, envCustomHeaders)
+  } else if (process.env.RADARR_CUSTOM_HEADERS) {
+    debug(`Radarr custom headers env var exists but failed to parse:`, process.env.RADARR_CUSTOM_HEADERS)
+  } else {
+    debug(`Radarr custom headers env var not set`)
+  }
+
   const headers: HeadersInit = {
     ...RADARR.DEFAULT_HEADERS,
     'X-Api-Key': apiKey,
     ...envCustomHeaders,
     ...customHeaders,
   }
+
+  // Log all headers except sensitive ones for debugging
+  const headerKeys = Object.keys(headers)
+  debug(`Radarr request headers (${headerKeys.length} total):`, headerKeys)
 
   return headers
 }
@@ -59,23 +72,33 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
 
   debug(`Radarr API request: ${method} ${path}`, { url, method })
 
-  const response = await fetch(url, {
-    ...init,
-    method,
-    headers: {
-      ...headers,
-      ...init.headers,
-    },
-  })
+  let response: Response
+  let errorText = ''
+
+  try {
+    response = await fetch(url, {
+      ...init,
+      method,
+      headers: {
+        ...headers,
+        ...init.headers,
+      },
+    })
+  } catch (error) {
+    // Network errors should not be cached (if caching is added in the future)
+    const errorMsg = error instanceof Error ? error.message : 'Network error'
+    fail(`Radarr API network error: ${errorMsg}`)
+    throw new Error(`Radarr API network error: ${errorMsg}`)
+  }
 
   // Check if response is HTML (unexpected for API) - likely Cloudflare blocking
   const contentType = response.headers.get('content-type') || ''
   const isHtml = contentType.toLowerCase().includes('text/html')
 
+  // Handle failed responses
   if (!response.ok || response.status > 399 || isHtml) {
     // Clone response for Cloudflare check (since we need to read body)
     const responseClone = response.clone()
-    let errorText: string
 
     try {
       errorText = await response.text()
@@ -95,6 +118,7 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
         contentType,
         isHtml,
       })
+      // Do not cache failed requests (if caching is added in the future)
       throw new Error(errorMsg)
     }
 
@@ -102,6 +126,7 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
     if (isHtml) {
       const errorMsg = 'Radarr API returned HTML page instead of expected JSON response - Possibly blocked by Cloudflare'
       fail(errorMsg, { status: response.status, url, contentType })
+      // Do not cache failed requests (if caching is added in the future)
       throw new Error(errorMsg)
     }
 
@@ -127,6 +152,7 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
       }
 
       fail(errorMessage)
+      // Do not cache failed requests (if caching is added in the future)
       throw new Error(errorMessage)
     }
   }
@@ -136,6 +162,16 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
     return {} as T
   }
 
-  const data = await response.json()
-  return data as T
+  // Parse response data
+  let data: T
+  try {
+    data = await response.json()
+  } catch (error) {
+    const errorMsg = 'Radarr API returned invalid JSON response'
+    fail(errorMsg, error)
+    // Do not cache failed requests (if caching is added in the future)
+    throw new Error(errorMsg)
+  }
+
+  return data
 }

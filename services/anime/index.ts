@@ -1,7 +1,7 @@
 import type { GetMergedAnimeListOptions } from '@/services/anilist'
 import { getMergedAnimeListWithoutCache } from '@/services/anilist'
 import type { Anime } from '@/services/anilist/types'
-import { fail, info } from '@/services/logger'
+import { fail, info, warn } from '@/services/logger'
 
 import { createInitialCacheData, getAnimeFromGist, getResultFromCache, saveAnimeToGist, setResultToCache, shouldUpdate, updateCacheData } from './cache'
 import type { AnimeCacheData } from './types'
@@ -150,7 +150,32 @@ export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOpti
 
   // Need to update: fetch new data and save to GIST
   info('getAnimeListWithAutoUpdate - Updating GIST cache')
-  const newAnime = await getMergedAnimeListWithoutCache(options)
+  let newAnime: Anime[]
+  try {
+    newAnime = await getMergedAnimeListWithoutCache(options)
+  } catch (error) {
+    // If fetch fails, don't cache error - return cached data if available, otherwise throw
+    fail('getAnimeListWithAutoUpdate - Failed to fetch anime data:', error)
+    if (cacheData) {
+      // Return existing cached data instead of failing
+      warn('getAnimeListWithAutoUpdate - Using stale cache due to fetch failure')
+      return cacheData.current.anime
+    }
+    // No cache available, throw error
+    throw error
+  }
+
+  // Validate that we got some data (don't cache empty results if all requests failed)
+  if (newAnime.length === 0) {
+    warn('getAnimeListWithAutoUpdate - Fetched empty anime list, not caching')
+    // Return existing cached data if available
+    if (cacheData) {
+      warn('getAnimeListWithAutoUpdate - Using stale cache due to empty fetch result')
+      return cacheData.current.anime
+    }
+    // No cache available, return empty array (but don't cache it)
+    return []
+  }
 
   // Create or update cache data
   if (!cacheData) {
@@ -172,7 +197,7 @@ export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOpti
     fail('getAnimeListWithAutoUpdate - Failed to save to GIST (non-blocking):', error)
   }
 
-  // Update in-memory cache
+  // Only cache successful results with data
   setResultToCache(cacheData.current.anime)
 
   return cacheData.current.anime
@@ -193,7 +218,21 @@ export async function updateAnimeGist(options: GetMergedAnimeListOptions = {}): 
   info('updateAnimeGist - Starting GIST update')
 
   // Fetch new anime data
-  const newAnime = await getMergedAnimeListWithoutCache(options)
+  let newAnime: Anime[]
+  try {
+    newAnime = await getMergedAnimeListWithoutCache(options)
+  } catch (error) {
+    // Don't cache errors - throw immediately
+    fail('updateAnimeGist - Failed to fetch anime data:', error)
+    throw error
+  }
+
+  // Validate that we got some data (don't cache empty results if all requests failed)
+  if (newAnime.length === 0) {
+    const errorMsg = 'updateAnimeGist - Fetched empty anime list, cannot update cache'
+    warn(errorMsg)
+    throw new Error(errorMsg)
+  }
 
   // Read existing cache data
   let cacheData: AnimeCacheData | null = null
@@ -224,7 +263,7 @@ export async function updateAnimeGist(options: GetMergedAnimeListOptions = {}): 
     throw error
   }
 
-  // Clear result cache to force refresh on next read
+  // Only cache successful results with data
   setResultToCache(cacheData.current.anime)
 
   return {

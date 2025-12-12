@@ -52,13 +52,42 @@ function getSearchParams(params: Record<string, string>) {
   })
 }
 
-function generateCacheKey(path: string, params: Record<string, string>): string {
+/**
+ * Generate a hash from custom headers for cache key
+ * This ensures different custom header configurations have different cache entries
+ */
+function hashCustomHeaders(customHeaders: Record<string, string>): string {
+  if (Object.keys(customHeaders).length === 0) {
+    return ''
+  }
+
+  // Sort headers by key and create a stable hash
+  const sortedEntries = Object.entries(customHeaders)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join('|')
+
+  // Simple hash function (not cryptographically secure, but sufficient for cache keys)
+  let hash = 0
+  for (let i = 0; i < sortedEntries.length; i++) {
+    const char = sortedEntries.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+
+  return hash.toString(36)
+}
+
+function generateCacheKey(path: string, params: Record<string, string>, customHeaders: Record<string, string>): string {
   const sortedParams = Object.keys(params)
     .sort()
     .map((key) => `${key}=${params[key]}`)
     .join('&')
 
-  return `${path}?${sortedParams}`
+  const headersHash = hashCustomHeaders(customHeaders)
+  const headersSuffix = headersHash ? `|h:${headersHash}` : ''
+
+  return `${path}?${sortedParams}${headersSuffix}`
 }
 
 export async function request(path: string, params: Record<string, string> = {}, init: RequestInit = {}, options: RequestOptions = {}): Promise<NavidromeResponse> {
@@ -68,8 +97,12 @@ export async function request(path: string, params: Record<string, string> = {},
   const isGetRequest = (init.method || 'GET').toUpperCase() === 'GET'
   const { useCache: shouldCache = CACHE && isGetRequest, cacheTtl = NAVIDROME_CACHE.DEFAULT_TTL } = options
 
+  // Parse custom headers from environment variable (needed for cache key)
+  const customHeaders = parseCustomHeaders(process.env.NAVIDROME_CUSTOM_HEADERS)
+
+  // Check cache before making request
   if (shouldCache) {
-    const cacheKey = generateCacheKey(path, params)
+    const cacheKey = generateCacheKey(path, params, customHeaders)
     const cached = cache.get(cacheKey)
 
     if (cached && Date.now() - cached.timestamp < cached.ttl * 1000) {
@@ -83,9 +116,6 @@ export async function request(path: string, params: Record<string, string> = {},
   const url = `${baseUrl}/${path.trim().replace(/^\/+|\/+$/g, '')}?${search.toString()}`
 
   debug(`Navidrome API request: ${path}`, { params })
-
-  // Parse custom headers from environment variable
-  const customHeaders = parseCustomHeaders(process.env.NAVIDROME_CUSTOM_HEADERS)
 
   // Debug: log custom headers if they exist
   if (Object.keys(customHeaders).length > 0) {
@@ -108,20 +138,30 @@ export async function request(path: string, params: Record<string, string> = {},
   const headerKeys = Object.keys(requestHeaders)
   debug(`Navidrome request headers (${headerKeys.length} total):`, headerKeys)
 
-  const response = await fetch(url, {
-    ...init,
-    method: 'GET',
-    headers: requestHeaders,
-  })
+  let response: Response
+  let errorText = ''
+
+  try {
+    response = await fetch(url, {
+      ...init,
+      method: 'GET',
+      headers: requestHeaders,
+    })
+  } catch (error) {
+    // Network errors should not be cached
+    const errorMsg = error instanceof Error ? error.message : 'Network error'
+    fail(`Navidrome API network error: ${errorMsg}`)
+    throw new Error(`Navidrome API network error: ${errorMsg}`)
+  }
 
   // Check if response is HTML (unexpected for API) - likely Cloudflare blocking
   const contentType = response.headers.get('content-type') || ''
   const isHtml = contentType.toLowerCase().includes('text/html')
 
+  // Handle failed responses - do not cache failures
   if (!response.ok || response.status > 399 || isHtml) {
     // Clone response for Cloudflare check (since we need to read body)
     const responseClone = response.clone()
-    let errorText: string
 
     try {
       errorText = await response.text()
@@ -141,6 +181,7 @@ export async function request(path: string, params: Record<string, string> = {},
         contentType,
         isHtml,
       })
+      // Do not cache failed requests
       throw new Error(errorMsg)
     }
 
@@ -148,41 +189,62 @@ export async function request(path: string, params: Record<string, string> = {},
     if (isHtml) {
       const errorMsg = 'Navidrome API returned HTML page instead of expected JSON response - Possibly blocked by Cloudflare'
       fail(errorMsg, { status: response.status, url, contentType })
+      // Do not cache failed requests
       throw new Error(errorMsg)
     }
 
     // Not Cloudflare blocking, throw original error
     if (!response.ok) {
-      fail(`Navidrome API request failed: ${response.status} ${response.statusText}`)
+      const errorMsg = `Navidrome API request failed: ${response.status} ${response.statusText}`
+      fail(errorMsg)
+      // Do not cache failed requests
       throw new Error('Navidrome API is not available')
     }
 
+    // Should not reach here, but handle anyway
     fail(`Navidrome API error: ${errorText}`)
     throw new Error(errorText)
   }
 
-  const data = await response.json()
+  // Parse response data
+  let data: NavidromeResponse
+  try {
+    data = await response.json()
+  } catch (error) {
+    const errorMsg = 'Navidrome API returned invalid JSON response'
+    fail(errorMsg, error)
+    // Do not cache failed requests
+    throw new Error(errorMsg)
+  }
+
+  // Validate response format
   if (!isNavidromeResponse(data)) {
-    fail('Navidrome API returned invalid response format')
+    const errorMsg = 'Navidrome API returned invalid response format'
+    fail(errorMsg)
+    // Do not cache failed requests
     throw new Error('Navidrome API returned empty response')
   }
 
+  // Check API response status
   const content = data['subsonic-response']
   if (content.status === 'failed') {
     const errorMessage = content.error?.message || 'Unknown Navidrome API error'
     const errorCode = content.error?.code || 'unknown'
-    fail(`Navidrome API error (${errorCode}): ${errorMessage}`)
-    throw new Error(`Navidrome API error (${errorCode}): ${errorMessage}`)
+    const errorMsg = `Navidrome API error (${errorCode}): ${errorMessage}`
+    fail(errorMsg)
+    // Do not cache failed requests
+    throw new Error(errorMsg)
   }
 
-  // Cache successful results
+  // Only cache successful responses
   if (shouldCache) {
-    const cacheKey = generateCacheKey(path, params)
+    const cacheKey = generateCacheKey(path, params, customHeaders)
     cache.set(cacheKey, {
       data: data,
       timestamp: Date.now(),
       ttl: cacheTtl,
     })
+    debug(`Navidrome response cached: ${path}`)
   }
 
   return data
