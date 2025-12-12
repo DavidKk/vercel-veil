@@ -1,4 +1,3 @@
-import { checkResponseForCloudflareBlocking } from '@/services/cloudflare'
 import { debug, fail, info } from '@/services/logger'
 import { parseCustomHeaders } from '@/utils/headers'
 
@@ -154,46 +153,27 @@ export async function request(path: string, params: Record<string, string> = {},
     throw new Error(`Navidrome API network error: ${errorMsg}`)
   }
 
-  // Check if response is HTML (unexpected for API) - likely Cloudflare blocking
+  // Check if response is HTML (unexpected for API)
   const contentType = response.headers.get('content-type') || ''
   const isHtml = contentType.toLowerCase().includes('text/html')
 
   // Handle failed responses - do not cache failures
   if (!response.ok || response.status > 399 || isHtml) {
-    // Clone response for Cloudflare check (since we need to read body)
-    const responseClone = response.clone()
-
     try {
       errorText = await response.text()
     } catch (error) {
       errorText = ''
     }
 
-    // Check if blocked by Cloudflare
-    const cloudflareCheck = await checkResponseForCloudflareBlocking(responseClone, url)
-    if (cloudflareCheck.isBlocked) {
-      const errorMsg = `Navidrome API blocked by Cloudflare: ${cloudflareCheck.reason || 'Unknown reason'}`
-      fail(errorMsg, {
-        status: response.status,
-        blockReason: cloudflareCheck.blockReason,
-        indicators: cloudflareCheck.indicators,
-        url,
-        contentType,
-        isHtml,
-      })
-      // Do not cache failed requests
-      throw new Error(errorMsg)
-    }
-
-    // If HTML response but not detected as Cloudflare, still suspicious
+    // If HTML response, it's suspicious
     if (isHtml) {
-      const errorMsg = 'Navidrome API returned HTML page instead of expected JSON response - Possibly blocked by Cloudflare'
+      const errorMsg = 'Navidrome API returned HTML page instead of expected JSON response'
       fail(errorMsg, { status: response.status, url, contentType })
       // Do not cache failed requests
       throw new Error(errorMsg)
     }
 
-    // Not Cloudflare blocking, throw original error
+    // Throw original error
     if (!response.ok) {
       const errorMsg = `Navidrome API request failed: ${response.status} ${response.statusText}`
       fail(errorMsg)
