@@ -1,5 +1,5 @@
 import { checkResponseForCloudflareBlocking } from '@/services/cloudflare'
-import { debug, fail } from '@/services/logger'
+import { debug, fail, info } from '@/services/logger'
 import { parseCustomHeaders } from '@/utils/headers'
 
 import { RADARR } from './constants'
@@ -29,13 +29,13 @@ function getHeaders(customHeaders?: Record<string, string>): HeadersInit {
   // Parse custom headers from environment variable
   const envCustomHeaders = parseCustomHeaders(process.env.RADARR_CUSTOM_HEADERS)
 
-  // Debug: log custom headers if they exist
+  // Log custom headers info (using info instead of debug for Vercel production visibility)
   if (Object.keys(envCustomHeaders).length > 0) {
-    debug(`Radarr custom headers parsed:`, envCustomHeaders)
+    info(`Radarr custom headers parsed:`, envCustomHeaders)
   } else if (process.env.RADARR_CUSTOM_HEADERS) {
-    debug(`Radarr custom headers env var exists but failed to parse:`, process.env.RADARR_CUSTOM_HEADERS)
+    info(`Radarr custom headers env var exists but failed to parse:`, process.env.RADARR_CUSTOM_HEADERS)
   } else {
-    debug(`Radarr custom headers env var not set`)
+    info(`Radarr custom headers env var not set`)
   }
 
   const headers: HeadersInit = {
@@ -45,9 +45,9 @@ function getHeaders(customHeaders?: Record<string, string>): HeadersInit {
     ...customHeaders,
   }
 
-  // Log all headers except sensitive ones for debugging
+  // Log all headers except sensitive ones for debugging (using info for Vercel production visibility)
   const headerKeys = Object.keys(headers)
-  debug(`Radarr request headers (${headerKeys.length} total):`, headerKeys)
+  info(`Radarr request headers (${headerKeys.length} total):`, headerKeys)
 
   return headers
 }
