@@ -1,5 +1,6 @@
 import { checkResponseForCloudflareBlocking } from '@/services/cloudflare'
 import { debug, fail } from '@/services/logger'
+import { parseCustomHeaders } from '@/utils/headers'
 
 import { RADARR } from './constants'
 import type { RadarrError } from './types'
@@ -24,9 +25,14 @@ function getServerInfo() {
 
 function getHeaders(customHeaders?: Record<string, string>): HeadersInit {
   const { apiKey } = getServerInfo()
+
+  // Parse custom headers from environment variable
+  const envCustomHeaders = parseCustomHeaders(process.env.RADARR_CUSTOM_HEADERS)
+
   const headers: HeadersInit = {
     ...RADARR.DEFAULT_HEADERS,
     'X-Api-Key': apiKey,
+    ...envCustomHeaders,
     ...customHeaders,
   }
 

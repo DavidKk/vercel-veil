@@ -240,7 +240,7 @@ export default function CloudflareCheck() {
               </label>
               <input
                 id="cf-access-client-secret"
-                type="password"
+                type="text"
                 value={cfAccessClientSecret}
                 onChange={(e) => setCfAccessClientSecret(e.target.value)}
                 placeholder="Cloudflare Access Client Secret"

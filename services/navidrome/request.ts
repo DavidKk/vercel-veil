@@ -1,5 +1,6 @@
 import { checkResponseForCloudflareBlocking } from '@/services/cloudflare'
 import { debug, fail } from '@/services/logger'
+import { parseCustomHeaders } from '@/utils/headers'
 
 import { NAVIDROME, NAVIDROME_CACHE } from './constants'
 import { hashToken } from './token'
@@ -83,14 +84,34 @@ export async function request(path: string, params: Record<string, string> = {},
 
   debug(`Navidrome API request: ${path}`, { params })
 
+  // Parse custom headers from environment variable
+  const customHeaders = parseCustomHeaders(process.env.NAVIDROME_CUSTOM_HEADERS)
+
+  // Debug: log custom headers if they exist
+  if (Object.keys(customHeaders).length > 0) {
+    debug(`Navidrome custom headers parsed:`, customHeaders)
+  } else if (process.env.NAVIDROME_CUSTOM_HEADERS) {
+    debug(`Navidrome custom headers env var exists but failed to parse:`, process.env.NAVIDROME_CUSTOM_HEADERS)
+  } else {
+    debug(`Navidrome custom headers env var not set`)
+  }
+
+  const requestHeaders: HeadersInit = {
+    'User-Agent': NAVIDROME.USER_AGENT,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...customHeaders,
+    ...init.headers,
+  }
+
+  // Log all headers except sensitive ones for debugging
+  const headerKeys = Object.keys(requestHeaders)
+  debug(`Navidrome request headers (${headerKeys.length} total):`, headerKeys)
+
   const response = await fetch(url, {
     ...init,
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...init.headers,
-    },
+    headers: requestHeaders,
   })
 
   // Check if response is HTML (unexpected for API) - likely Cloudflare blocking
