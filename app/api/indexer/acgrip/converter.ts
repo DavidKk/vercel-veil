@@ -84,7 +84,7 @@ export function generateMockNewznabItem(req: NextRequest): NewznabItem {
 function extractSeriesName(title: string): string {
   // Try to extract series name from common patterns
   // Pattern: [Group] Title / English Title - Episode (Quality)...
-  // ACG.RIP format: [黒ネズミたち] 海贼王 / One Piece - 1152 (B-Global 3840x2160 HEVC AAC MKV)
+  // ACG.RIP format example: [Group] Chinese Title / English Title - 1152 (Quality)
   const bracketMatch = title.match(/\]\s*([^\]]+?)\s*\/\s*([^/]+?)\s*-/)
   if (bracketMatch) {
     // Prefer Chinese title (first match) or English title (second match)
@@ -104,7 +104,7 @@ function extractSeriesName(title: string): string {
     // Remove episode numbers and quality indicators
     let seriesName = fallbackMatch[1]
       .replace(/\[\d+\]/g, '') // Remove [1151] style episode numbers
-      .replace(/第\d+[話话]/g, '') // Remove 第1151話 style
+      .replace(/第\d+[話话]/g, '') // Remove Chinese episode format (e.g., "第1151話")
       .replace(/\d+p/i, '') // Remove 1080p, 720p, etc.
       .replace(/\[.*?\]/g, '') // Remove any remaining brackets
       .trim()

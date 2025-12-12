@@ -14,12 +14,12 @@ interface AnimeHeaderProps {
 export default function AnimeHeader({ hideShareButton = false }: AnimeHeaderProps) {
   const pathname = usePathname()
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  // 判断是否是详情页：路径包含 /anime/ 且不是 /anime 本身
+  // Check if it's a detail page: path contains /anime/ but is not /anime itself
   const isDetailPage = useMemo(() => {
     if (!pathname) return false
     return pathname.includes('/anime/') && pathname !== '/anime'
   }, [pathname])
-  // 判断是否是分享页面
+  // Check if it's a share page
   const isSharePage = useMemo(() => {
     if (!pathname) return false
     return pathname.includes('/anime/share/')

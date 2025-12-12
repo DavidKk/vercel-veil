@@ -14,12 +14,12 @@ interface MoviesHeaderProps {
 export default function MoviesHeader({ hideShareButton = false }: MoviesHeaderProps) {
   const pathname = usePathname()
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  // 判断是否是详情页：路径包含 /movies/ 且不是 /movies 本身
+  // Check if it's a detail page: path contains /movies/ but is not /movies itself
   const isDetailPage = useMemo(() => {
     if (!pathname) return false
     return pathname.includes('/movies/') && pathname !== '/movies'
   }, [pathname])
-  // 判断是否是分享页面
+  // Check if it's a share page
   const isSharePage = useMemo(() => {
     if (!pathname) return false
     return pathname.includes('/movies/share/')

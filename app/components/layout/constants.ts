@@ -1,16 +1,16 @@
 /**
- * 布局配置
- * 统一管理 Nav 和 Footer 的配置
+ * Layout configuration
+ * Unified management of Nav and Footer configuration
  */
 
 /**
- * 配置需要隐藏全局 Nav 和 Footer 的路由前缀
- * 如果当前路径以这些前缀开头，Nav 和 Footer 将不会显示
+ * Route prefixes that should hide global Nav and Footer
+ * If the current path starts with these prefixes, Nav and Footer will not be displayed
  */
 export const HIDDEN_ROUTES = ['/movies', '/anime']
 
 /**
- * 默认导航配置
+ * Default navigation configuration
  */
 export const DEFAULT_NAV = {
   notification: [{ name: 'Email', href: '/email' }],

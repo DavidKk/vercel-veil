@@ -89,7 +89,7 @@ function extractSeriesName(title: string): string {
     // Remove episode numbers and quality indicators
     let seriesName = bracketMatch[1]
       .replace(/\[\d+\]/g, '') // Remove [1151] style episode numbers
-      .replace(/第\d+[話话]/g, '') // Remove 第1151話 style
+      .replace(/第\d+[話话]/g, '') // Remove Chinese episode format (e.g., "第1151話")
       .replace(/\d+p/i, '') // Remove 1080p, 720p, etc.
       .replace(/\[.*?\]/g, '') // Remove any remaining brackets
       .trim()
