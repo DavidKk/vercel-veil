@@ -4,6 +4,7 @@ import { useRequest } from 'ahooks'
 import { AlertCircle, Check, Info, X } from 'feather-icons-react'
 import { useRef, useState } from 'react'
 
+import { checkCloudflare } from '@/app/actions/cloudflare'
 import type { AlertImperativeHandler } from '@/components/Alert'
 import Alert from '@/components/Alert'
 import { Spinner } from '@/components/Spinner'
@@ -23,6 +24,8 @@ interface TestResult {
 export default function CloudflareCheck() {
   const [url, setUrl] = useState('')
   const [requestType, setRequestType] = useState<RequestType>('server')
+  const [cfAccessClientId, setCfAccessClientId] = useState('')
+  const [cfAccessClientSecret, setCfAccessClientSecret] = useState('')
   const [results, setResults] = useState<TestResult[]>([])
   const alertRef = useRef<AlertImperativeHandler>(null)
 
@@ -32,17 +35,11 @@ export default function CloudflareCheck() {
         throw new Error('Please enter a URL to test')
       }
 
-      const encodedUrl = encodeURIComponent(url.trim())
-      const apiUrl = `/api/cloudflare-test?url=${encodedUrl}`
-      const response = await fetch(apiUrl)
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Request failed: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      return data.data as CloudflareCheckResult
+      return await checkCloudflare({
+        url: url.trim(),
+        cfAccessClientId: cfAccessClientId.trim() || undefined,
+        cfAccessClientSecret: cfAccessClientSecret.trim() || undefined,
+      })
     },
     {
       manual: true,
@@ -81,11 +78,19 @@ export default function CloudflareCheck() {
       }
 
       // Direct client-side fetch
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+      if (cfAccessClientId.trim()) {
+        headers['CF-Access-Client-Id'] = cfAccessClientId.trim()
+      }
+      if (cfAccessClientSecret.trim()) {
+        headers['CF-Access-Client-Secret'] = cfAccessClientSecret.trim()
+      }
+
       const response = await fetch(url.trim(), {
         method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
+        headers,
       })
 
       // Check response
@@ -212,6 +217,37 @@ export default function CloudflareCheck() {
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               disabled={isLoading}
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="cf-access-client-id" className="block text-sm font-medium mb-2">
+                CF-Access-Client-Id (Optional)
+              </label>
+              <input
+                id="cf-access-client-id"
+                type="text"
+                value={cfAccessClientId}
+                onChange={(e) => setCfAccessClientId(e.target.value)}
+                placeholder="Cloudflare Access Client ID"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label htmlFor="cf-access-client-secret" className="block text-sm font-medium mb-2">
+                CF-Access-Client-Secret (Optional)
+              </label>
+              <input
+                id="cf-access-client-secret"
+                type="password"
+                value={cfAccessClientSecret}
+                onChange={(e) => setCfAccessClientSecret(e.target.value)}
+                placeholder="Cloudflare Access Client Secret"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                disabled={isLoading}
+              />
+            </div>
           </div>
 
           <div>
