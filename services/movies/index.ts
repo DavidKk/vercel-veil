@@ -1,4 +1,4 @@
-import { fail, info } from '@/services/logger'
+import { fail, info, warn } from '@/services/logger'
 import type { GetMergedMoviesListOptions } from '@/services/maoyan'
 import { getMergedMoviesListWithoutCache } from '@/services/maoyan'
 import type { MergedMovie } from '@/services/maoyan/types'
@@ -158,7 +158,32 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
 
   // Need to update: fetch new data and save to GIST
   info('getMoviesListWithAutoUpdate - Updating GIST cache')
-  const newMovies = await getMergedMoviesListWithoutCache(options)
+  let newMovies: MergedMovie[]
+  try {
+    newMovies = await getMergedMoviesListWithoutCache(options)
+  } catch (error) {
+    // If fetch fails, don't cache error - return cached data if available, otherwise throw
+    fail('getMoviesListWithAutoUpdate - Failed to fetch movies data:', error)
+    if (cacheData) {
+      // Return existing cached data instead of failing
+      warn('getMoviesListWithAutoUpdate - Using stale cache due to fetch failure')
+      return cacheData.current.movies
+    }
+    // No cache available, throw error
+    throw error
+  }
+
+  // Validate that we got some data (don't cache empty results if all requests failed)
+  if (newMovies.length === 0) {
+    warn('getMoviesListWithAutoUpdate - Fetched empty movies list, not caching')
+    // Return existing cached data if available
+    if (cacheData) {
+      warn('getMoviesListWithAutoUpdate - Using stale cache due to empty fetch result')
+      return cacheData.current.movies
+    }
+    // No cache available, return empty array (but don't cache it)
+    return []
+  }
 
   // Create or update cache data
   if (!cacheData) {
@@ -180,7 +205,7 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
     fail('getMoviesListWithAutoUpdate - Failed to save to GIST (non-blocking):', error)
   }
 
-  // Update in-memory cache
+  // Only cache successful results with data
   setResultToCache(cacheData.current.movies)
 
   return cacheData.current.movies
@@ -201,7 +226,21 @@ export async function updateMoviesGist(options: GetMergedMoviesListOptions = {})
   info('updateMoviesGist - Starting GIST update')
 
   // Fetch new movies data
-  const newMovies = await getMergedMoviesListWithoutCache(options)
+  let newMovies: MergedMovie[]
+  try {
+    newMovies = await getMergedMoviesListWithoutCache(options)
+  } catch (error) {
+    // Don't cache errors - throw immediately
+    fail('updateMoviesGist - Failed to fetch movies data:', error)
+    throw error
+  }
+
+  // Validate that we got some data (don't cache empty results if all requests failed)
+  if (newMovies.length === 0) {
+    const errorMsg = 'updateMoviesGist - Fetched empty movies list, cannot update cache'
+    warn(errorMsg)
+    throw new Error(errorMsg)
+  }
 
   // Read existing cache data
   let cacheData: MoviesCacheData | null = null
@@ -232,8 +271,7 @@ export async function updateMoviesGist(options: GetMergedMoviesListOptions = {})
     throw error
   }
 
-  // Clear result cache to force refresh on next read
-  // Note: We don't have a clearCache function, but setting new cache will work
+  // Only cache successful results with data
   setResultToCache(cacheData.current.movies)
 
   return {
