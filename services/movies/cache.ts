@@ -3,7 +3,7 @@ import { info, warn } from '@/services/logger'
 import type { MergedMovie } from '@/services/maoyan/types'
 
 import { DATA_VALIDITY_DURATION, GIST_FILE_NAME, RESULT_CACHE_KEY, UPDATE_WINDOW_DURATION, UPDATE_WINDOWS } from './constants'
-import { findExistingMovie } from './index'
+import { findExistingMovie, getMovieId } from './index'
 import type { MoviesCacheData } from './types'
 
 /**
@@ -98,7 +98,7 @@ export async function getMoviesFromGist(): Promise<MoviesCacheData | null> {
     const data = JSON.parse(content) as MoviesCacheData
 
     // Validate data structure
-    if (!data.current || !data.previous) {
+    if (!data.data) {
       warn('Invalid movies cache data structure')
       return null
     }
@@ -130,36 +130,7 @@ export async function saveMoviesToGist(data: MoviesCacheData): Promise<void> {
   const maxSize = 1024 * 1024 // 1MB
   if (contentSize > maxSize) {
     warn(`Movies cache content size (${(contentSize / 1024).toFixed(2)}KB) exceeds GIST limit (1MB)`)
-    // Try to reduce size by removing previous data if it's too large
-    if (data.previous.movies.length > 0) {
-      info('Attempting to save with empty previous data to reduce size')
-      const reducedData: MoviesCacheData = {
-        ...data,
-        previous: {
-          ...data.previous,
-          movies: [],
-          metadata: {
-            ...data.previous.metadata,
-            totalCount: 0,
-            description: 'Previous data cleared due to size limit',
-          },
-        },
-      }
-      const reducedContent = JSON.stringify(reducedData, null, 2)
-      const reducedSize = new Blob([reducedContent]).size
-      if (reducedSize > maxSize) {
-        throw new Error(`Even with reduced data, size (${(reducedSize / 1024).toFixed(2)}KB) exceeds limit`)
-      }
-      await writeGistFile({
-        gistId,
-        gistToken,
-        file: GIST_FILE_NAME,
-        content: reducedContent,
-      })
-      info('Movies cache saved to GIST (reduced)')
-      return
-    }
-    throw new Error('Movies cache content too large and cannot be reduced')
+    throw new Error(`Movies cache content too large (${(contentSize / 1024).toFixed(2)}KB) exceeds limit (1MB)`)
   }
 
   // writeGistFile() throws on failure - let it propagate (caller handles with .catch())
@@ -178,11 +149,11 @@ export async function saveMoviesToGist(data: MoviesCacheData): Promise<void> {
  * - New movies: set insertedAt and updatedAt to current time
  * - Existing movies: preserve insertedAt, update updatedAt
  */
-export function processMoviesWithInsertTime(previousMovies: MergedMovie[], newMovies: MergedMovie[]): MergedMovie[] {
+export function processMoviesWithInsertTime(existingMovies: MergedMovie[], newMovies: MergedMovie[]): MergedMovie[] {
   const now = Date.now()
 
   return newMovies.map((movie) => {
-    const existing = findExistingMovie(previousMovies, movie)
+    const existing = findExistingMovie(existingMovies, movie)
 
     if (existing && existing.insertedAt) {
       // Existing movie: preserve insertedAt, update updatedAt
@@ -261,7 +232,7 @@ export function createInitialCacheData(movies: MergedMovie[]): MoviesCacheData {
   const sortedMovies = sortMoviesByInsertTime(processedMovies)
 
   return {
-    current: {
+    data: {
       date,
       timestamp: now,
       movies: sortedMovies,
@@ -270,37 +241,34 @@ export function createInitialCacheData(movies: MergedMovie[]): MoviesCacheData {
         description: `Movies cache created at ${new Date(now).toISOString()}`,
       },
     },
-    previous: {
-      date,
-      timestamp: now,
-      movies: [],
-      metadata: {
-        totalCount: 0,
-        description: 'Initial previous data (empty)',
-      },
-    },
+    notifiedMovieIds: [],
   }
 }
 
 /**
  * Update cache data with new movies
  */
-export function updateCacheData(current: MoviesCacheData['current'], newMovies: MergedMovie[]): MoviesCacheData {
+export function updateCacheData(existing: MoviesCacheData['data'], newMovies: MergedMovie[], previousNotifiedMovieIds: string[] = []): MoviesCacheData {
   const now = Date.now()
   const date = getUtcDateString()
 
-  // Process movies with insert time (using current.movies as previous)
-  const processedMovies = processMoviesWithInsertTime(current.movies, newMovies)
+  // Process movies with insert time (using existing.movies to preserve insertedAt)
+  const processedMovies = processMoviesWithInsertTime(existing.movies, newMovies)
   const sortedMovies = sortMoviesByInsertTime(processedMovies)
 
   // Count new movies
   const newMoviesCount = sortedMovies.filter((m) => {
-    const existing = findExistingMovie(current.movies, m)
-    return !existing || !existing.insertedAt
+    const existingMovie = findExistingMovie(existing.movies, m)
+    return !existingMovie || !existingMovie.insertedAt
   }).length
 
+  // Clean up notifiedMovieIds: only keep IDs that exist in the new movies list
+  // This prevents the list from growing indefinitely when movies are removed
+  const newMovieIds = new Set(sortedMovies.map((movie) => getMovieId(movie)))
+  const cleanedNotifiedMovieIds = previousNotifiedMovieIds.filter((id) => newMovieIds.has(id))
+
   return {
-    current: {
+    data: {
       date,
       timestamp: now,
       movies: sortedMovies,
@@ -309,8 +277,7 @@ export function updateCacheData(current: MoviesCacheData['current'], newMovies: 
         description: `Movies cache updated at ${new Date(now).toISOString()}, ${newMoviesCount} new movies`,
       },
     },
-    previous: {
-      ...current,
-    },
+    // Preserve notified movie IDs from previous cache, but only those that still exist
+    notifiedMovieIds: cleanedNotifiedMovieIds,
   }
 }

@@ -2,7 +2,7 @@
 
 import { validateCookie } from '@/services/auth/access'
 import { debug, fail, info } from '@/services/logger'
-import { getMoviesFromGist, getNewMoviesFromCache } from '@/services/movies'
+import { filterMoviesByCurrentYear, getMoviesFromGist, getUnnotifiedMovies } from '@/services/movies'
 import { sendEmail } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
 import { generateShareToken } from '@/utils/jwt'
@@ -24,7 +24,15 @@ function requireEnv(key: string) {
 async function getRealMoviesDataForPreview(): Promise<Record<string, string> | null> {
   try {
     const cacheData = await getMoviesFromGist()
-    const newMovies = getNewMoviesFromCache(cacheData)
+    const unnotifiedMovies = getUnnotifiedMovies(cacheData)
+
+    if (unnotifiedMovies.length === 0) {
+      return null
+    }
+
+    // Filter movies to only include those released in the current year or later
+    // This matches the notification logic to ensure preview shows the same movies
+    const newMovies = filterMoviesByCurrentYear(unnotifiedMovies)
 
     if (newMovies.length === 0) {
       return null

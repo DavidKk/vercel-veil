@@ -1,5 +1,6 @@
 import { getFavoriteMovieIds, getMoviesListWithGistCache, isFavoriteFeatureAvailable } from '@/app/actions/movies'
 import { checkAccess } from '@/services/auth/access'
+import { filterMoviesByCurrentYear } from '@/services/movies'
 import { isMobileDevice } from '@/utils/device'
 
 import MovieListAdaptive from './MovieListAdaptive'
@@ -20,21 +21,9 @@ export default async function MoviesPage() {
     isMobileDevice(),
   ])
 
-  // Filter out movies released more than 2 years ago
-  const twoYearsAgo = new Date()
-  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
-
-  const filteredMovies = movies.filter((movie) => {
-    // If no release date, keep the movie (might be upcoming)
-    if (!movie.releaseDate) {
-      return true
-    }
-
-    // Parse release date and compare with 2 years ago
-    const releaseDate = new Date(movie.releaseDate)
-    // Only filter out movies released more than 2 years ago
-    return releaseDate >= twoYearsAgo
-  })
+  // Filter movies to only include those released in the current year or later
+  // This matches the notification logic and prevents old movies from being displayed
+  const filteredMovies = filterMoviesByCurrentYear(movies)
 
   // Convert array to Set for efficient lookup
   const favoriteIds = new Set(favoriteIdsArray)

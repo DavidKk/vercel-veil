@@ -24,26 +24,27 @@ export type { MoviesCacheData } from './types'
 export { filterHotMovies, isHighlyAnticipated, isHot, isVeryHot, judgeMovieHotStatus, MovieHotStatus } from './popularity'
 
 /**
- * Find existing movie in previous movies list
+ * Find existing movie in movies list
+ * Used to preserve insertedAt timestamp when updating cache
  * Matching rules: maoyanId > tmdbId > name (lowercase, trimmed)
  */
-export function findExistingMovie(previousMovies: MergedMovie[], newMovie: MergedMovie): MergedMovie | undefined {
-  for (const previous of previousMovies) {
+export function findExistingMovie(existingMovies: MergedMovie[], newMovie: MergedMovie): MergedMovie | undefined {
+  for (const existing of existingMovies) {
     // Match by maoyanId (if both exist)
-    if (newMovie.maoyanId && previous.maoyanId && String(newMovie.maoyanId) === String(previous.maoyanId)) {
-      return previous
+    if (newMovie.maoyanId && existing.maoyanId && String(newMovie.maoyanId) === String(existing.maoyanId)) {
+      return existing
     }
 
     // Match by tmdbId (if both exist)
-    if (newMovie.tmdbId && previous.tmdbId && newMovie.tmdbId === previous.tmdbId) {
-      return previous
+    if (newMovie.tmdbId && existing.tmdbId && newMovie.tmdbId === existing.tmdbId) {
+      return existing
     }
 
     // Match by name (case-insensitive, trimmed)
     const newName = newMovie.name.toLowerCase().trim()
-    const prevName = previous.name.toLowerCase().trim()
-    if (newName && prevName && newName === prevName) {
-      return previous
+    const existingName = existing.name.toLowerCase().trim()
+    if (newName && existingName && newName === existingName) {
+      return existing
     }
   }
 
@@ -51,34 +52,126 @@ export function findExistingMovie(previousMovies: MergedMovie[], newMovie: Merge
 }
 
 /**
- * Get new movies by comparing current and previous lists
- * A movie is considered "new" if it doesn't exist in the previous list
+ * Get unique identifier for a movie
+ * Priority: maoyanId > tmdbId > name (lowercase, trimmed)
+ * @param movie Movie object
+ * @returns Unique identifier string
  */
-export function getNewMovies(currentMovies: MergedMovie[], previousMovies: MergedMovie[]): MergedMovie[] {
-  return currentMovies.filter((movie) => {
-    const existing = findExistingMovie(previousMovies, movie)
-    // New movie if not found in previous list
-    return !existing
+export function getMovieId(movie: MergedMovie): string {
+  if (movie.maoyanId !== undefined && movie.maoyanId !== null) {
+    return `maoyan:${String(movie.maoyanId)}`
+  }
+  if (movie.tmdbId !== undefined && movie.tmdbId !== null) {
+    return `tmdb:${movie.tmdbId}`
+  }
+  return `name:${movie.name.toLowerCase().trim()}`
+}
+
+/**
+ * Get movie year from movie data
+ * Priority: year field > releaseDate parsing
+ * @param movie Movie object
+ * @returns Movie year as number, or null if not available
+ */
+export function getMovieYear(movie: MergedMovie): number | null {
+  // Check year field first (most reliable)
+  if (movie.year !== undefined && movie.year !== null) {
+    const year = typeof movie.year === 'number' ? movie.year : parseInt(String(movie.year), 10)
+    if (!isNaN(year)) {
+      return year
+    }
+  }
+
+  // Fallback to releaseDate if year is not available
+  if (movie.releaseDate) {
+    try {
+      const releaseDate = new Date(movie.releaseDate)
+      if (!isNaN(releaseDate.getTime())) {
+        return releaseDate.getFullYear()
+      }
+    } catch (error) {
+      // Invalid date format
+    }
+  }
+
+  return null
+}
+
+/**
+ * Check if a movie is released in the current year or later
+ * @param movie Movie object
+ * @param targetYear Optional target year (defaults to current year)
+ * @returns Object with isValid (boolean) and year (number | null)
+ */
+export function isMovieFromYearOrLater(movie: MergedMovie, targetYear?: number): { isValid: boolean; year: number | null } {
+  const currentYear = targetYear ?? new Date().getFullYear()
+  const movieYear = getMovieYear(movie)
+
+  if (movieYear === null) {
+    return { isValid: false, year: null }
+  }
+
+  return {
+    isValid: movieYear >= currentYear,
+    year: movieYear,
+  }
+}
+
+/**
+ * Filter movies to only include those released in the current year or later
+ * @param movies Array of movies to filter
+ * @param targetYear Optional target year (defaults to current year)
+ * @returns Filtered array of movies
+ */
+export function filterMoviesByCurrentYear(movies: MergedMovie[], targetYear?: number): MergedMovie[] {
+  return movies.filter((movie) => {
+    const { isValid } = isMovieFromYearOrLater(movie, targetYear)
+    return isValid
   })
 }
 
 /**
- * Get new movies from cache data
+ * Get unnotified movies from cache data
+ * Filters out movies that have already been notified
  * @param cacheData Movies cache data from GIST
- * @returns Array of new movies, or empty array if no new movies or invalid cache data
+ * @returns Array of unnotified movies, or empty array if no unnotified movies or invalid cache data
  */
-export function getNewMoviesFromCache(cacheData: MoviesCacheData | null): MergedMovie[] {
-  if (!cacheData) {
+export function getUnnotifiedMovies(cacheData: MoviesCacheData | null): MergedMovie[] {
+  if (!cacheData || !cacheData.data || !cacheData.data.movies) {
     return []
   }
 
-  // Check if previous movies list exists and is not empty
-  if (!cacheData.previous.movies || cacheData.previous.movies.length === 0) {
-    return []
+  const notifiedIds = new Set(cacheData.notifiedMovieIds || [])
+  return cacheData.data.movies.filter((movie) => {
+    const movieId = getMovieId(movie)
+    return !notifiedIds.has(movieId)
+  })
+}
+
+/**
+ * Mark movies as notified and update cache data
+ * @param cacheData Current cache data
+ * @param movies Movies to mark as notified
+ * @returns Updated cache data with notified movie IDs added
+ */
+export function markMoviesAsNotified(cacheData: MoviesCacheData, movies: MergedMovie[]): MoviesCacheData {
+  const notifiedIds = new Set(cacheData.notifiedMovieIds || [])
+
+  // Add movie IDs to notified set
+  for (const movie of movies) {
+    const movieId = getMovieId(movie)
+    notifiedIds.add(movieId)
   }
 
-  // Get new movies by comparing current and previous
-  return getNewMovies(cacheData.current.movies, cacheData.previous.movies)
+  // Clean up: remove IDs that are no longer in the movies list
+  // This prevents notifiedMovieIds from growing indefinitely
+  const currentMovieIds = new Set(cacheData.data.movies.map((movie) => getMovieId(movie)))
+  const cleanedNotifiedIds = Array.from(notifiedIds).filter((id) => currentMovieIds.has(id))
+
+  return {
+    ...cacheData,
+    notifiedMovieIds: cleanedNotifiedIds,
+  }
 }
 
 /**
@@ -101,8 +194,8 @@ export async function getMoviesListFromCache(): Promise<MergedMovie[]> {
   // Read from GIST (read-only, no update check)
   try {
     const cacheData = await getMoviesFromGist()
-    if (cacheData && cacheData.current && cacheData.current.movies) {
-      const movies = cacheData.current.movies
+    if (cacheData && cacheData.data && cacheData.data.movies) {
+      const movies = cacheData.data.movies
       // Update in-memory cache for faster subsequent access
       setResultToCache(movies)
       info('getMoviesListFromCache - GIST cache hit')
@@ -146,11 +239,11 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
   }
 
   // Check if update is needed
-  const needsUpdate = !cacheData || (cacheData.current.timestamp && shouldUpdate(cacheData.current.timestamp))
+  const needsUpdate = !cacheData || (cacheData.data.timestamp && shouldUpdate(cacheData.data.timestamp))
 
   if (cacheData && !needsUpdate) {
     // Use cached data (still fresh)
-    const movies = cacheData.current.movies
+    const movies = cacheData.data.movies
     setResultToCache(movies)
     info('getMoviesListWithAutoUpdate - GIST cache hit (fresh)')
     return movies
@@ -167,7 +260,7 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
     if (cacheData) {
       // Return existing cached data instead of failing
       warn('getMoviesListWithAutoUpdate - Using stale cache due to fetch failure')
-      return cacheData.current.movies
+      return cacheData.data.movies
     }
     // No cache available, throw error
     throw error
@@ -179,7 +272,7 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
     // Return existing cached data if available
     if (cacheData) {
       warn('getMoviesListWithAutoUpdate - Using stale cache due to empty fetch result')
-      return cacheData.current.movies
+      return cacheData.data.movies
     }
     // No cache available, return empty array (but don't cache it)
     return []
@@ -192,7 +285,7 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
     info('getMoviesListWithAutoUpdate - Created initial cache data')
   } else {
     // Update existing cache
-    cacheData = updateCacheData(cacheData.current, newMovies)
+    cacheData = updateCacheData(cacheData.data, newMovies, cacheData.notifiedMovieIds)
     info('getMoviesListWithAutoUpdate - Updated existing cache data')
   }
 
@@ -206,9 +299,9 @@ export async function getMoviesListWithAutoUpdate(options: GetMergedMoviesListOp
   }
 
   // Only cache successful results with data
-  setResultToCache(cacheData.current.movies)
+  setResultToCache(cacheData.data.movies)
 
-  return cacheData.current.movies
+  return cacheData.data.movies
 }
 
 /**
@@ -258,7 +351,7 @@ export async function updateMoviesGist(options: GetMergedMoviesListOptions = {})
     info('updateMoviesGist - Created initial cache data')
   } else {
     // Update existing cache
-    cacheData = updateCacheData(cacheData.current, newMovies)
+    cacheData = updateCacheData(cacheData.data, newMovies, cacheData.notifiedMovieIds)
     info('updateMoviesGist - Updated existing cache data')
   }
 
@@ -272,10 +365,10 @@ export async function updateMoviesGist(options: GetMergedMoviesListOptions = {})
   }
 
   // Only cache successful results with data
-  setResultToCache(cacheData.current.movies)
+  setResultToCache(cacheData.data.movies)
 
   return {
-    movies: cacheData.current.movies,
+    movies: cacheData.data.movies,
     cacheData,
   }
 }

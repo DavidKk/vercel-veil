@@ -4,7 +4,8 @@ import { buildMoviesForTemplate } from '@/app/actions/email/utils'
 import { cron } from '@/initializer/controller'
 import { standardResponseSuccess } from '@/initializer/response'
 import { fail, info } from '@/services/logger'
-import { getMoviesFromGist, getNewMoviesFromCache } from '@/services/movies'
+import type { MergedMovie } from '@/services/maoyan/types'
+import { getMoviesFromGist, getUnnotifiedMovies, isMovieFromYearOrLater, markMoviesAsNotified, saveMoviesToGist } from '@/services/movies'
 import { filterHotMovies } from '@/services/movies/popularity'
 import { sendNotification } from '@/services/resend'
 import { getTemplate, renderTemplate } from '@/services/templates/registry'
@@ -21,34 +22,61 @@ export const runtime = 'nodejs'
 export const GET = cron(async (req: NextRequest) => {
   info('Movies notification handler started')
 
-  // Get new movies from cache
-  const newMovies = getNewMoviesFromCache(await getMoviesFromGist())
+  // Get cache data
+  const cacheData = await getMoviesFromGist()
+  if (!cacheData) {
+    info('No cache data found, skipping notification')
+    return standardResponseSuccess()
+  }
 
-  if (newMovies.length === 0) {
-    info('No new movies found, skipping notification')
+  // Get unnotified movies from cache (no need to compare with previous list)
+  const unnotifiedMovies = getUnnotifiedMovies(cacheData)
+
+  if (unnotifiedMovies.length === 0) {
+    info('No unnotified movies found, skipping notification')
     return standardResponseSuccess()
   }
 
   // Filter movies to only include those released in the current year or later
   // This prevents old movies from being pushed when Maoyan re-releases them
   // Also includes upcoming movies (e.g., January movies in December)
+  // Auto-mark old movies as notified to prevent them from appearing in future notifications
   const currentYear = new Date().getFullYear()
-  const filteredMovies = newMovies.filter((movie) => {
-    // Check year field first (most reliable)
-    if (movie.year !== undefined && movie.year !== null) {
-      return movie.year >= currentYear
+  const oldMoviesToMark: MergedMovie[] = []
+  const filteredMovies = unnotifiedMovies.filter((movie) => {
+    const { isValid, year: movieYear } = isMovieFromYearOrLater(movie, currentYear)
+
+    // If movie is old (has valid year but < currentYear), mark it as notified
+    if (movieYear !== null && !isValid) {
+      oldMoviesToMark.push(movie)
+      info(`Auto-marking old movie "${movie.name}" (year: ${movieYear}) as notified`)
+      return false
     }
 
-    // Fallback to releaseDate if year is not available
-    if (movie.releaseDate) {
-      const releaseYear = new Date(movie.releaseDate).getFullYear()
-      return releaseYear >= currentYear
+    // If movie is valid (year >= currentYear), include it
+    if (isValid) {
+      return true
     }
 
     // If neither year nor releaseDate is available, filter out
     // (cannot confirm if it's from current year or later)
+    info(`Filtered out movie "${movie.name}": no valid year or releaseDate available`)
     return false
   })
+
+  // Mark old movies as notified if any were found
+  if (oldMoviesToMark.length > 0) {
+    const updatedCacheData = markMoviesAsNotified(cacheData, oldMoviesToMark)
+    try {
+      await saveMoviesToGist(updatedCacheData)
+      info(`Auto-marked ${oldMoviesToMark.length} old movies as notified and updated cache`)
+      // Update cacheData for subsequent operations
+      Object.assign(cacheData, updatedCacheData)
+    } catch (error) {
+      fail('Failed to auto-mark old movies as notified (non-blocking):', error)
+      // Continue with notification process even if save fails
+    }
+  }
 
   if (filteredMovies.length === 0) {
     info(`No new movies from ${currentYear} or later found after filtering, skipping notification`)
@@ -65,7 +93,7 @@ export const GET = cron(async (req: NextRequest) => {
   }
 
   info(
-    `Found ${hotMovies.length} hot new movies from ${currentYear} or later (filtered from ${newMovies.length} total new movies, ${filteredMovies.length} from current year), preparing notification email`
+    `Found ${hotMovies.length} hot unnotified movies from ${currentYear} or later (filtered from ${unnotifiedMovies.length} total unnotified movies, ${filteredMovies.length} from current year), preparing notification email`
   )
 
   // Generate a single share token for the entire email
@@ -119,7 +147,17 @@ export const GET = cron(async (req: NextRequest) => {
   const subject = `[Movies] Found ${hotMovies.length} new movie${hotMovies.length > 1 ? 's' : ''}`
   await sendNotification(subject, html)
 
-  info(`Notification email sent successfully for ${hotMovies.length} hot new movies from ${currentYear} or later`)
+  // Mark movies as notified and update cache
+  const updatedCacheData = markMoviesAsNotified(cacheData, hotMovies)
+  try {
+    await saveMoviesToGist(updatedCacheData)
+    info(`Successfully marked ${hotMovies.length} movies as notified and updated cache`)
+  } catch (error) {
+    fail('Failed to save notified movie IDs to cache (non-blocking):', error)
+    // Don't throw - notification was sent successfully
+  }
+
+  info(`Notification email sent successfully for ${hotMovies.length} hot unnotified movies from ${currentYear} or later`)
 
   return standardResponseSuccess()
 })
