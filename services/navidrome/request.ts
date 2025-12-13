@@ -1,5 +1,5 @@
 import { debug, fail, info } from '@/services/logger'
-import { parseCustomHeaders } from '@/utils/headers'
+import { filterBrowserHeaders, parseCustomHeaders } from '@/utils/headers'
 
 import { NAVIDROME, NAVIDROME_CACHE } from './constants'
 import { hashToken } from './token'
@@ -125,12 +125,17 @@ export async function request(path: string, params: Record<string, string> = {},
     info(`Navidrome custom headers env var not set`)
   }
 
+  // Filter out CLI-related and server-exposing headers from custom headers and init.headers
+  const filteredCustomHeaders = filterBrowserHeaders(customHeaders)
+  const filteredInitHeaders = filterBrowserHeaders(init.headers || {})
+
+  // Build request headers with browser User-Agent and filtered headers
   const requestHeaders: HeadersInit = {
     'User-Agent': NAVIDROME.USER_AGENT,
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    ...customHeaders,
-    ...init.headers,
+    ...filteredCustomHeaders,
+    ...filteredInitHeaders,
   }
 
   // Log all headers except sensitive ones for debugging (using info for Vercel production visibility)

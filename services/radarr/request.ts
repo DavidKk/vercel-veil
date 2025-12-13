@@ -1,5 +1,5 @@
 import { debug, fail, info } from '@/services/logger'
-import { parseCustomHeaders } from '@/utils/headers'
+import { filterBrowserHeaders, parseCustomHeaders } from '@/utils/headers'
 
 import { RADARR } from './constants'
 import type { RadarrError } from './types'
@@ -37,11 +37,16 @@ function getHeaders(customHeaders?: Record<string, string>): HeadersInit {
     info(`Radarr custom headers env var not set`)
   }
 
+  // Filter out CLI-related and server-exposing headers
+  const filteredEnvCustomHeaders = filterBrowserHeaders(envCustomHeaders)
+  const filteredCustomHeaders = filterBrowserHeaders(customHeaders || {})
+
   const headers: HeadersInit = {
     ...RADARR.DEFAULT_HEADERS,
+    'User-Agent': RADARR.USER_AGENT,
     'X-Api-Key': apiKey,
-    ...envCustomHeaders,
-    ...customHeaders,
+    ...filteredEnvCustomHeaders,
+    ...filteredCustomHeaders,
   }
 
   // Log all headers except sensitive ones for debugging (using info for Vercel production visibility)
@@ -74,13 +79,16 @@ export async function request<T = any>(path: string, init: RequestInit = {}, cus
   let response: Response
   let errorText = ''
 
+  // Filter out CLI-related and server-exposing headers from init.headers
+  const filteredInitHeaders = filterBrowserHeaders(init.headers || {})
+
   try {
     response = await fetch(url, {
       ...init,
       method,
       headers: {
         ...headers,
-        ...init.headers,
+        ...filteredInitHeaders,
       },
     })
   } catch (error) {

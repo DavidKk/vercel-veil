@@ -9,4 +9,6 @@ export const RADARR = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   } as const,
+  /** Default User-Agent header - Mac browser to simulate browser access */
+  USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36',
 } as const
