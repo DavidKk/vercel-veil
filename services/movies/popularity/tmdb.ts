@@ -12,6 +12,12 @@ const TMDB_HOT_SCORE_VERY_HOT = 100
 const TMDB_HOT_SCORE_AVERAGE = 50
 
 /**
+ * Minimum rating threshold for low vote count movies to be considered very hot
+ * Movies with low vote count need both high popularity AND high rating to be very hot
+ */
+const TMDB_LOW_VOTE_COUNT_MIN_RATING_FOR_VERY_HOT = 7.5
+
+/**
  * Judge movie hot status using TMDB data
  * @param movie Movie data
  * @param today Current date
@@ -32,9 +38,17 @@ export function judgeMovieHotStatusWithTMDB(movie: MergedMovie, today: Date, rel
   }
 
   // Just released movies (low vote count)
+  // For movies with low vote count, require both high popularity AND high rating to be very hot
+  // This prevents movies with low vote count but high popularity from being incorrectly marked as very hot
   if (voteCount < TMDB_VOTE_COUNT_THRESHOLD) {
-    if (popularity > TMDB_POPULARITY_HIGHLY_ANTICIPATED) return MovieHotStatus.VERY_HOT
-    if (popularity > TMDB_POPULARITY_AVERAGE) return MovieHotStatus.AVERAGE
+    // For very hot: need both high popularity AND high rating
+    if (popularity > TMDB_POPULARITY_HIGHLY_ANTICIPATED && voteAverage >= TMDB_LOW_VOTE_COUNT_MIN_RATING_FOR_VERY_HOT) {
+      return MovieHotStatus.VERY_HOT
+    }
+    // For average: still use popularity threshold, but rating should be reasonable (>= 6.5)
+    if (popularity > TMDB_POPULARITY_AVERAGE && voteAverage >= 6.5) {
+      return MovieHotStatus.AVERAGE
+    }
     return MovieHotStatus.NICHE
   }
 

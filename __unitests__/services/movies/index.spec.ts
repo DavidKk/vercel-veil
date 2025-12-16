@@ -20,7 +20,7 @@ describe('services/movies/index', () => {
 
     it('should use tmdbId when maoyanId is not available', () => {
       const movie: MergedMovie = {
-        maoyanId: undefined,
+        maoyanId: undefined as any,
         name: 'Test Movie',
         poster: 'https://example.com/poster.jpg',
         source: 'tmdbPopular',
@@ -35,7 +35,7 @@ describe('services/movies/index', () => {
 
     it('should use name when neither maoyanId nor tmdbId is available', () => {
       const movie: MergedMovie = {
-        maoyanId: undefined,
+        maoyanId: undefined as any,
         name: '  Test Movie  ',
         poster: 'https://example.com/poster.jpg',
         source: 'tmdbPopular',
@@ -74,6 +74,36 @@ describe('services/movies/index', () => {
       const result = getMovieId(movie)
 
       expect(result).toBe('tmdb:67890')
+    })
+
+    it('should use tmdbId when maoyanId is tmdb-xxx format', () => {
+      const movie: MergedMovie = {
+        maoyanId: 'tmdb-1387382',
+        name: 'Test Movie',
+        poster: 'https://example.com/poster.jpg',
+        source: 'tmdbPopular',
+        sources: ['tmdbPopular'],
+        tmdbId: 1387382,
+      }
+
+      const result = getMovieId(movie)
+
+      expect(result).toBe('tmdb:1387382')
+    })
+
+    it('should fallback to maoyan:tmdb-xxx when maoyanId is tmdb-xxx format but no tmdbId', () => {
+      const movie: MergedMovie = {
+        maoyanId: 'tmdb-1387382',
+        name: 'Test Movie',
+        poster: 'https://example.com/poster.jpg',
+        source: 'tmdbPopular',
+        sources: ['tmdbPopular'],
+        tmdbId: undefined,
+      }
+
+      const result = getMovieId(movie)
+
+      expect(result).toBe('maoyan:tmdb-1387382')
     })
   })
 
@@ -465,7 +495,7 @@ describe('services/movies/index', () => {
           timestamp: Date.now(),
           movies: [
             {
-              maoyanId: undefined,
+              maoyanId: undefined as any,
               name: 'Movie 1',
               poster: 'https://example.com/poster1.jpg',
               source: 'tmdbPopular',
@@ -473,7 +503,7 @@ describe('services/movies/index', () => {
               tmdbId: 100,
             },
             {
-              maoyanId: undefined,
+              maoyanId: undefined as any,
               name: 'Movie 2',
               poster: 'https://example.com/poster2.jpg',
               source: 'tmdbPopular',
@@ -502,14 +532,14 @@ describe('services/movies/index', () => {
           timestamp: Date.now(),
           movies: [
             {
-              maoyanId: undefined,
+              maoyanId: undefined as any,
               name: 'Movie One',
               poster: 'https://example.com/poster1.jpg',
               source: 'tmdbPopular',
               sources: ['tmdbPopular'],
             },
             {
-              maoyanId: undefined,
+              maoyanId: undefined as any,
               name: 'Movie Two',
               poster: 'https://example.com/poster2.jpg',
               source: 'tmdbPopular',
@@ -703,7 +733,7 @@ describe('services/movies/index', () => {
               sources: ['topRated'],
             },
             {
-              maoyanId: undefined,
+              maoyanId: undefined as any,
               name: 'Movie 2',
               poster: 'https://example.com/poster2.jpg',
               source: 'tmdbPopular',
@@ -711,7 +741,7 @@ describe('services/movies/index', () => {
               tmdbId: 200,
             },
             {
-              maoyanId: undefined,
+              maoyanId: undefined as any,
               name: 'Movie Three',
               poster: 'https://example.com/poster3.jpg',
               source: 'tmdbPopular',

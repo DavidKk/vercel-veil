@@ -53,17 +53,34 @@ export function findExistingMovie(existingMovies: MergedMovie[], newMovie: Merge
 
 /**
  * Get unique identifier for a movie
- * Priority: maoyanId > tmdbId > name (lowercase, trimmed)
+ * Priority: real maoyanId (numeric) > tmdbId > maoyanId (tmdb-xxx format) > name (lowercase, trimmed)
  * @param movie Movie object
  * @returns Unique identifier string
  */
 export function getMovieId(movie: MergedMovie): string {
+  // Check if maoyanId exists and is a real Maoyan ID (not a tmdb-xxx placeholder)
   if (movie.maoyanId !== undefined && movie.maoyanId !== null) {
-    return `maoyan:${String(movie.maoyanId)}`
+    const maoyanIdStr = String(movie.maoyanId)
+    // If maoyanId is in "tmdb-xxx" format, skip it and use tmdbId instead
+    if (maoyanIdStr.startsWith('tmdb-')) {
+      // Fall through to check tmdbId
+    } else {
+      // Real Maoyan ID (numeric or other format)
+      return `maoyan:${maoyanIdStr}`
+    }
   }
+
+  // Use tmdbId if available (either no maoyanId, or maoyanId was tmdb-xxx format)
   if (movie.tmdbId !== undefined && movie.tmdbId !== null) {
     return `tmdb:${movie.tmdbId}`
   }
+
+  // Fallback: if maoyanId was tmdb-xxx format but no tmdbId, still use it
+  if (movie.maoyanId !== undefined && movie.maoyanId !== null) {
+    return `maoyan:${String(movie.maoyanId)}`
+  }
+
+  // Last resort: use name
   return `name:${movie.name.toLowerCase().trim()}`
 }
 
