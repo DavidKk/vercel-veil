@@ -8,14 +8,22 @@ import AnimePageContent from './AnimePageContent'
 // Force dynamic rendering because we use cookies for authentication
 export const dynamic = 'force-dynamic'
 
-export default async function AnimePage() {
+interface AnimePageProps {
+  searchParams: Promise<{ noCache?: string; limit?: string }>
+}
+
+export default async function AnimePage(props: AnimePageProps) {
   // Require authentication to access this page
   await checkAccess({ isApiRouter: false, redirectUrl: '/anime' })
 
+  // Parse searchParams to get options
+  const searchParams = await props.searchParams
+  const noCache = searchParams.noCache === 'true' || searchParams.noCache === '1'
+  const limit = searchParams.limit ? parseInt(searchParams.limit, 10) : undefined
+
   // Fetch data on server side
-  const [anime, favoriteAvailable, favoriteIdsArray, initialIsMobile] = await Promise.all([
-    getAnimeListWithGistCache(),
-    isFavoriteFeatureAvailable(),
+  const [anime, favoriteIdsArray, initialIsMobile] = await Promise.all([
+    getAnimeListWithGistCache({ noCache, limit }),
     isFavoriteFeatureAvailable().then((available) => (available ? getFavoriteAnimeIds() : Promise.resolve([]))),
     isMobileDevice(),
   ])
@@ -41,7 +49,7 @@ export default async function AnimePage() {
 
   return (
     <AnimePageContent>
-      <AnimeListAdaptive anime={filteredAnime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} shareToken={undefined} initialIsMobile={initialIsMobile} />
+      <AnimeListAdaptive anime={filteredAnime} favoriteIds={favoriteIds} shareToken={undefined} initialIsMobile={initialIsMobile} />
     </AnimePageContent>
   )
 }

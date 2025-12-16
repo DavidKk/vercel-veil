@@ -27,15 +27,12 @@ export default async function AnimeDetailPage(props: AnimeDetailPageProps) {
   }
 
   // Fetch optional data (favorites) - don't block page rendering if this fails
-  const [favoriteAvailable, favoriteIdsArray] = await Promise.all([
-    isFavoriteFeatureAvailable(),
-    isFavoriteFeatureAvailable()
-      .then((available) => (available ? getFavoriteAnimeIds() : Promise.resolve([])))
-      .catch(() => []), // Gracefully handle errors - return empty array
-  ])
+  const favoriteIdsArray = await isFavoriteFeatureAvailable()
+    .then((available) => (available ? getFavoriteAnimeIds() : Promise.resolve([])))
+    .catch(() => []) // Gracefully handle errors - return empty array
 
   // Convert array to Set for efficient lookup
   const favoriteIds = new Set(favoriteIdsArray)
 
-  return <AnimeDetail anime={anime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} />
+  return <AnimeDetail anime={anime} favoriteIds={favoriteIds} />
 }

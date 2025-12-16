@@ -3,8 +3,8 @@ interface AniListBadgeProps {
 }
 
 /**
- * AniList Badge 组件
- * 移动端和PC端使用不同的尺寸
+ * AniList Badge component
+ * Uses different sizes for mobile and desktop
  */
 export default function AniListBadge({ url }: AniListBadgeProps) {
   return (

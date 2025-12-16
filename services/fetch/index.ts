@@ -67,7 +67,26 @@ export async function fetchWithCache(url: string, options?: FetchOptions) {
     try {
       const response = await fetch(url, fetchOptions)
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
+        // Try to read response body for detailed error information
+        let errorBody: string | undefined
+        try {
+          const text = await response.text()
+          errorBody = text
+          // Try to parse as JSON if possible
+          try {
+            const json = JSON.parse(text)
+            errorBody = JSON.stringify(json, null, 2)
+          } catch {
+            // Not JSON, use text as is
+          }
+        } catch {
+          // Failed to read response body
+        }
+
+        const errorMessage = errorBody
+          ? `HTTP error! Status: ${response.status} ${response.statusText}\nResponse: ${errorBody}`
+          : `HTTP error! Status: ${response.status} ${response.statusText}`
+        throw new Error(errorMessage)
       }
 
       const data = await response.arrayBuffer()

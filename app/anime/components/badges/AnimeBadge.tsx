@@ -8,8 +8,8 @@ interface AnimeBadgeProps {
 }
 
 /**
- * Anime 模块专用 Badge 组件
- * 支持深色和浅色两种变体
+ * Anime module specific Badge component
+ * Supports dark and light variants
  */
 export default function AnimeBadge({ children, tooltip, className = '', variant = 'light' }: AnimeBadgeProps) {
   const baseClasses =

@@ -9,25 +9,23 @@ import LazyImage from '@/components/LazyImage'
 import Tooltip from '@/components/Tooltip'
 import type { Anime } from '@/services/anilist/types'
 
-import { AniListBadge, AnimeGenreBadge, AnimeScoreBadge, AnimeYearBadge, EpisodesBadge, PopularityBadge } from '../components/badges'
+import { AniListBadge, AnimeGenreBadge, AnimeScoreBadge, AnimeYearBadge, EpisodesBadge, PopularityBadge, TMDBBadge } from '../components/badges'
 import { useFavoriteAnime } from '../hooks/useFavoriteAnime'
-import { formatAnimeTitle, getAnimeReleaseInfo, getSourceBadgeText } from '../utils/animeHelpers'
+import { cleanDescription, formatAnimeTitle, getAnimeReleaseInfo, getAssociatedTitle, getSourceBadgeText } from '../utils/animeHelpers'
 
 interface AnimeDetailProps {
   anime: Anime
-  favoriteAvailable: boolean
   favoriteIds: Set<number>
 }
 
-export default function AnimeDetail({ anime, favoriteAvailable, favoriteIds }: AnimeDetailProps) {
+export default function AnimeDetail({ anime, favoriteIds }: AnimeDetailProps) {
   const coverImageUrl = anime.coverImage
   const title = formatAnimeTitle(anime)
   const alertRef = useRef<AlertImperativeHandler>(null)
 
   const { isFavorited, isFavoriting, handleFavorite } = useFavoriteAnime({
-    initialIsFavorited: anime.tmdbId ? favoriteIds.has(anime.tmdbId) : false,
-    animeId: anime.tmdbId,
-    favoriteAvailable,
+    initialIsFavorited: anime.anilistId ? favoriteIds.has(anime.anilistId) : false,
+    animeId: anime.anilistId,
     alertRef,
   })
 
@@ -36,6 +34,10 @@ export default function AnimeDetail({ anime, favoriteAvailable, favoriteIds }: A
 
   // Format score (0-100 to 0-10)
   const formattedScore = anime.averageScore ? anime.averageScore / 10 : null
+
+  // Get priority description: Chinese description from TMDB/TVDB > original description
+  const priorityDescription = anime.tmdbDescription || anime.tvdbDescription || anime.description
+  const hasChineseDescription = !!(anime.tmdbDescription || anime.tvdbDescription)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -72,11 +74,22 @@ export default function AnimeDetail({ anime, favoriteAvailable, favoriteIds }: A
               <h1 className="text-xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent mb-3 lg:mb-4">
                 {title}
               </h1>
+              {/* TMDB/TVDB Title below main title (only if different from main title) */}
+              {(() => {
+                const associatedTitle = getAssociatedTitle(anime)
+                return associatedTitle ? (
+                  <p className="text-sm lg:text-base font-bold bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 bg-clip-text text-transparent mb-3 lg:mb-4">
+                    {associatedTitle}
+                  </p>
+                ) : null
+              })()}
 
               {/* Tags and Information */}
               <div className="flex flex-wrap items-center gap-2 lg:gap-3 mb-4 lg:mb-6">
                 {/* Source tags */}
                 {anime.anilistUrl && <AniListBadge url={anime.anilistUrl} />}
+                {/* TMDB Badge */}
+                {anime.tmdbUrl && <TMDBBadge url={anime.tmdbUrl} />}
                 {/* Year */}
                 {anime.startDate?.year && <AnimeYearBadge year={anime.startDate.year} tooltip="Start Year" />}
                 {/* Score */}
@@ -96,11 +109,53 @@ export default function AnimeDetail({ anime, favoriteAvailable, favoriteIds }: A
                 </div>
               )}
 
-              {/* Description */}
-              {anime.description && (
+              {/* Description - Priority: Chinese description from TMDB/TVDB > original description */}
+              {priorityDescription && (
                 <div className="mb-4 lg:mb-6">
-                  <h2 className="text-sm lg:text-lg font-semibold text-gray-800 mb-1.5 lg:mb-2">Overview</h2>
-                  <p className="text-sm lg:text-base leading-relaxed text-gray-600 whitespace-pre-line">{anime.description.replace(/<[^>]*>/g, '')}</p>
+                  {hasChineseDescription ? (
+                    // Show TMDB or TVDB description with source label
+                    <>
+                      {anime.tmdbDescription && (
+                        <p
+                          className="text-sm lg:text-base leading-relaxed text-gray-600 whitespace-pre-line overflow-hidden"
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 7,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {cleanDescription(anime.tmdbDescription)}
+                        </p>
+                      )}
+                      {!anime.tmdbDescription && anime.tvdbDescription && (
+                        <p
+                          className="text-sm lg:text-base leading-relaxed text-gray-600 whitespace-pre-line overflow-hidden"
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 7,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {cleanDescription(anime.tvdbDescription)}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    // Show original AniList description (no label)
+                    <p
+                      className="text-sm lg:text-base leading-relaxed text-gray-600 whitespace-pre-line overflow-hidden"
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 7,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {cleanDescription(anime.description)}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -113,7 +168,7 @@ export default function AnimeDetail({ anime, favoriteAvailable, favoriteIds }: A
               )}
 
               {/* Favorite Button */}
-              {anime.tmdbId && favoriteAvailable && (
+              {
                 <div className="mt-auto pt-4 lg:pt-6">
                   <button
                     onClick={handleFavorite}
@@ -121,13 +176,13 @@ export default function AnimeDetail({ anime, favoriteAvailable, favoriteIds }: A
                     className={`flex w-full lg:w-auto items-center justify-center gap-1.5 lg:gap-2 rounded-xl px-4 py-2 lg:px-6 lg:py-3 text-sm lg:text-base font-bold transition-all shadow-md hover:shadow-lg ${
                       isFavorited ? 'bg-pink-500 text-white hover:bg-pink-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-2 border-purple-300'
                     } disabled:cursor-not-allowed disabled:opacity-50`}
-                    title={isFavorited ? 'Remove from favorites' : 'Add to TMDB favorites'}
+                    title={isFavorited ? 'Remove from Planning to Watch' : 'Add to Planning to Watch'}
                   >
                     <Heart size={16} className="lg:w-5 lg:h-5" fill={isFavorited ? 'currentColor' : 'none'} />
-                    <span>{isFavoriting ? 'Processing...' : isFavorited ? 'Favorited' : 'Favorite'}</span>
+                    <span>{isFavoriting ? 'Processing...' : isFavorited ? 'In List' : 'Add to List'}</span>
                   </button>
                 </div>
-              )}
+              }
             </div>
           </div>
         </div>

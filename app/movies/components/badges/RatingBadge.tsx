@@ -8,8 +8,8 @@ interface RatingBadgeProps {
 }
 
 /**
- * 评分 Badge 组件
- * 移动端和PC端使用不同的尺寸
+ * Rating Badge component
+ * Uses different sizes for mobile and desktop
  */
 export default function RatingBadge({ rating, score }: RatingBadgeProps) {
   if (!rating && !score) return null

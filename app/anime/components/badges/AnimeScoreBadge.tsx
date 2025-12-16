@@ -8,8 +8,8 @@ interface AnimeScoreBadgeProps {
 }
 
 /**
- * Anime 评分 Badge 组件
- * 支持深色和浅色两种变体
+ * Anime Score Badge component
+ * Supports dark and light variants
  */
 export default function AnimeScoreBadge({ score, variant = 'dark' }: AnimeScoreBadgeProps) {
   const formattedScore = (score / 10).toFixed(1)

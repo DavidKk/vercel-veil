@@ -3,8 +3,8 @@ interface TMDBBadgeProps {
 }
 
 /**
- * TMDB Badge 组件
- * 移动端和PC端使用不同的尺寸
+ * TMDB Badge component
+ * Uses different sizes for mobile and desktop
  */
 export default function TMDBBadge({ url }: TMDBBadgeProps) {
   return (

@@ -1,12 +1,12 @@
 'use server'
 
 import type { GetMergedAnimeListOptions } from '@/services/anilist'
+import { hasAnilistAccessToken } from '@/services/anilist/env'
+import { getPlanningAnimeIds, toggleAnimePlanningList } from '@/services/anilist/favorites'
 import type { Anime } from '@/services/anilist/types'
-import { getAnimeListFromCache, getAnimeListWithAutoUpdate } from '@/services/anime'
+import { deleteAnimeFromGist, getAnimeListFromCache, getAnimeListWithAutoUpdate } from '@/services/anime'
 import { validateCookie } from '@/services/auth/access'
-import { fail } from '@/services/logger'
-import { addTVToFavorites, getFavoriteTVs } from '@/services/tmdb'
-import { hasTmdbAuth } from '@/services/tmdb/env'
+import { fail, info } from '@/services/logger'
 
 /**
  * Get anime list with GIST cache (Server Action)
@@ -29,22 +29,22 @@ export async function getAnimeListWithGistCache(options: GetMergedAnimeListOptio
 }
 
 /**
- * Get user's favorite anime IDs from TMDB (Server Action)
+ * Get user's "Planning to Watch" anime IDs from AniList (Server Action)
  * Internal use only, requires authentication
  */
 export async function getFavoriteAnimeIds(): Promise<number[]> {
   if (!(await validateCookie())) {
-    fail('Unauthorized access to favorite anime IDs')
+    fail('Unauthorized access to Planning to Watch anime IDs')
     return []
   }
 
-  if (!hasTmdbAuth()) {
+  if (!hasAnilistAccessToken()) {
     return []
   }
 
   try {
-    const favoriteIds = await getFavoriteTVs()
-    return Array.from(favoriteIds)
+    const planningIds = await getPlanningAnimeIds()
+    return Array.from(planningIds)
   } catch (error) {
     fail('getFavoriteAnimeIds - Error:', error)
     return []
@@ -52,13 +52,13 @@ export async function getFavoriteAnimeIds(): Promise<number[]> {
 }
 
 /**
- * Add anime to TMDB favorites list (Server Action)
+ * Add anime to AniList "Planning to Watch" list (Server Action)
  * Internal use only, requires authentication
  */
-export async function favoriteAnime(tmdbId: number, favorite = true): Promise<{ success: boolean; message: string }> {
+export async function favoriteAnime(anilistId: number, favorite = true): Promise<{ success: boolean; message: string }> {
   try {
     if (!(await validateCookie())) {
-      fail('Unauthorized access to favorite anime')
+      fail('Unauthorized access to Planning to Watch list')
       return {
         success: false,
         message: 'Unauthorized',
@@ -73,11 +73,11 @@ export async function favoriteAnime(tmdbId: number, favorite = true): Promise<{ 
   }
 
   try {
-    await addTVToFavorites(tmdbId, favorite)
+    await toggleAnimePlanningList(anilistId, favorite)
 
     return {
       success: true,
-      message: favorite ? 'Added to favorites' : 'Removed from favorites',
+      message: favorite ? 'Added to Planning to Watch' : 'Removed from Planning to Watch',
     }
   } catch (error) {
     fail('favoriteAnime - Error:', error)
@@ -99,7 +99,7 @@ export async function isFavoriteFeatureAvailable(): Promise<boolean> {
     if (!(await validateCookie())) {
       return false
     }
-    return hasTmdbAuth()
+    return hasAnilistAccessToken()
   } catch (error) {
     fail('isFavoriteFeatureAvailable - Error:', error)
     return false
@@ -144,5 +144,44 @@ export async function getAnimeById(id: string | number): Promise<Anime | null> {
   } catch (error) {
     fail('getAnimeById - Error:', error)
     throw error
+  }
+}
+
+/**
+ * Clear anime cache (Server Action)
+ * Internal use only, requires authentication
+ * Deletes GIST cache file (in-memory cache is preserved)
+ */
+export async function clearAnimeCache(): Promise<{ success: boolean; message: string }> {
+  try {
+    if (!(await validateCookie())) {
+      fail('Unauthorized access to clear anime cache')
+      return {
+        success: false,
+        message: 'Unauthorized',
+      }
+    }
+  } catch (error) {
+    fail('clearAnimeCache - Auth check error:', error)
+    return {
+      success: false,
+      message: 'Unauthorized',
+    }
+  }
+
+  try {
+    await deleteAnimeFromGist()
+    info('Anime GIST cache cleared by user')
+    return {
+      success: true,
+      message: 'Cache cleared successfully',
+    }
+  } catch (error) {
+    fail('clearAnimeCache - Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Operation failed'
+    return {
+      success: false,
+      message: errorMessage,
+    }
   }
 }

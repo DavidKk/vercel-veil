@@ -6,8 +6,8 @@ interface PopularityBadgeProps {
 }
 
 /**
- * Anime 人气 Badge 组件
- * 支持深色和浅色两种变体
+ * Anime Popularity Badge component
+ * Supports dark and light variants
  */
 export default function PopularityBadge({ popularity, variant = 'dark' }: PopularityBadgeProps) {
   if (popularity === 0) return null

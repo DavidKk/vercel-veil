@@ -8,7 +8,9 @@ import type { AnimeCacheData } from './types'
 
 // Re-export types
 export {
+  clearResultCache,
   createInitialCacheData,
+  deleteAnimeFromGist,
   getAnimeFromGist,
   getResultFromCache,
   processAnimeWithInsertTime,
@@ -114,18 +116,31 @@ export async function getAnimeListFromCache(): Promise<Anime[]> {
  * This function handles both reading and writing to GIST automatically
  * - Checks in-memory cache first
  * - Reads from GIST if available
- * - Updates GIST if cache is stale or missing
+ * - Updates GIST if cache is stale or missing (unless noCache is true)
  * - Returns cached or fresh data
  * This function can be called by both pages and cron jobs
  * @param options Options for fetching anime
+ *   - noCache: If true, skip GIST updates (only affects GraphQL query cache in dev)
  * @returns Anime list
  */
 export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOptions = {}): Promise<Anime[]> {
-  // Check in-memory cache first
-  const cachedResult = getResultFromCache()
-  if (cachedResult) {
-    info('getAnimeListWithAutoUpdate - In-memory cache hit')
-    return cachedResult
+  const { noCache = false, limit } = options
+
+  // Helper function to apply limit if specified
+  const applyLimit = (anime: Anime[]): Anime[] => {
+    if (limit && limit > 0 && anime.length > limit) {
+      return anime.slice(0, limit)
+    }
+    return anime
+  }
+
+  // Check in-memory cache first (only if noCache is false)
+  if (!noCache) {
+    const cachedResult = getResultFromCache()
+    if (cachedResult) {
+      info('getAnimeListWithAutoUpdate - In-memory cache hit')
+      return applyLimit(cachedResult)
+    }
   }
 
   // Read from GIST
@@ -133,10 +148,42 @@ export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOpti
   try {
     cacheData = await getAnimeFromGist()
   } catch (error) {
-    // GIST read failure - will update GIST below
+    // GIST read failure - will update GIST below (unless noCache)
     info('getAnimeListWithAutoUpdate - GIST read failed, will create new cache:', error)
   }
 
+  // If noCache is true, always fetch fresh data (skip cache check)
+  if (noCache) {
+    info('getAnimeListWithAutoUpdate - noCache=true, fetching fresh data without updating GIST')
+    let newAnime: Anime[]
+    try {
+      newAnime = await getMergedAnimeListWithoutCache(options)
+    } catch (error) {
+      // If fetch fails and we have cached data, return it
+      fail('getAnimeListWithAutoUpdate - Failed to fetch anime data:', error)
+      if (cacheData) {
+        warn('getAnimeListWithAutoUpdate - Using stale cache due to fetch failure')
+        return applyLimit(cacheData.current.anime)
+      }
+      throw error
+    }
+
+    // Return fresh data without updating GIST
+    if (newAnime.length > 0) {
+      // Update in-memory cache only (not GIST)
+      setResultToCache(newAnime)
+      return newAnime
+    }
+
+    // If empty result, return cached data if available
+    if (cacheData) {
+      warn('getAnimeListWithAutoUpdate - Fetched empty list, using stale cache')
+      return applyLimit(cacheData.current.anime)
+    }
+    return []
+  }
+
+  // Normal flow: check if update is needed, then fetch new data and save to GIST
   // Check if update is needed
   const needsUpdate = !cacheData || (cacheData.current.timestamp && shouldUpdate(cacheData.current.timestamp))
 
@@ -145,10 +192,10 @@ export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOpti
     const anime = cacheData.current.anime
     setResultToCache(anime)
     info('getAnimeListWithAutoUpdate - GIST cache hit (fresh)')
-    return anime
+    return applyLimit(anime)
   }
 
-  // Need to update: fetch new data and save to GIST
+  // Normal flow: fetch new data and save to GIST
   info('getAnimeListWithAutoUpdate - Updating GIST cache')
   let newAnime: Anime[]
   try {
@@ -159,7 +206,7 @@ export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOpti
     if (cacheData) {
       // Return existing cached data instead of failing
       warn('getAnimeListWithAutoUpdate - Using stale cache due to fetch failure')
-      return cacheData.current.anime
+      return applyLimit(cacheData.current.anime)
     }
     // No cache available, throw error
     throw error
@@ -171,7 +218,7 @@ export async function getAnimeListWithAutoUpdate(options: GetMergedAnimeListOpti
     // Return existing cached data if available
     if (cacheData) {
       warn('getAnimeListWithAutoUpdate - Using stale cache due to empty fetch result')
-      return cacheData.current.anime
+      return applyLimit(cacheData.current.anime)
     }
     // No cache available, return empty array (but don't cache it)
     return []
