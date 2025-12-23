@@ -103,11 +103,10 @@ export default function QishuiTest() {
 
       // Convert playlist items to search queries
       // Use song title, or combine title and artist if available
-      const queries = result.data.map((item: [string, string]) => {
-        const [title, artistInfo] = item
-        // Try to extract artist name from artistInfo (format: "Artist • Album")
-        const artist = artistInfo.split(' • ')[0]?.trim() || ''
-        // Use title + artist if artist is available, otherwise just title
+      const queries = result.data.map((item: [string, string[], string]) => {
+        const [title, artists] = item
+        // Use title + first artist if artists are available, otherwise just title
+        const artist = artists.length > 0 ? artists[0] : ''
         return artist ? `${title} ${artist}`.trim() : title.trim()
       })
 
@@ -137,14 +136,14 @@ export default function QishuiTest() {
       })
 
       // Match playlist items with search results
-      const items: PlaylistItem[] = result.data.map((item: [string, string], index: number) => {
-        const [title, artistInfo] = item
+      const items: PlaylistItem[] = result.data.map((item: [string, string[], string], index: number) => {
+        const [title, artists] = item
         const queryResult = searchData.queries[index]
         const matchedSongs = queryResult.songsIds.map((id) => songsMap.get(id)).filter((song): song is NonNullable<typeof song> => song !== undefined)
 
         return {
           title,
-          artist: artistInfo.split(' • ')[0]?.trim() || '',
+          artist: artists.length > 0 ? artists.join(' • ') : '',
           hasMatch: matchedSongs.length > 0,
           matchedSongs,
         }

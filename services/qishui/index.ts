@@ -105,14 +105,35 @@ export function parseQishuiPlaylist(html: string): Playlist {
 
     const playlist: Playlist = []
 
-    // Convert each item to playlist item format [song title, artist/album information]
+    // Convert each item to playlist item format [song title, artists array, album]
     for (const item of items) {
       if (item.length >= 2) {
-        // First two lines: song title and artist/album information
-        playlist.push([item[0].trim(), item[1].trim()] as PlaylistItem)
+        // First line: song title
+        const songTitle = item[0].trim()
+        // Second line: artist/album information (separated by •)
+        const artistAlbumInfo = item[1].trim()
+
+        // Split by • to separate artists and album
+        const parts = artistAlbumInfo
+          .split(' • ')
+          .map((part) => part.trim())
+          .filter((part) => part.length > 0)
+
+        if (parts.length === 0) {
+          // No artist/album information
+          playlist.push([songTitle, [], ''] as PlaylistItem)
+        } else if (parts.length === 1) {
+          // Only one part, treat as artist (no album)
+          playlist.push([songTitle, [parts[0]], ''] as PlaylistItem)
+        } else {
+          // Multiple parts: all except last are artists, last is album
+          const artists = parts.slice(0, -1)
+          const album = parts[parts.length - 1]
+          playlist.push([songTitle, artists, album] as PlaylistItem)
+        }
       } else if (item.length === 1) {
-        // If only one line, second item is empty string
-        playlist.push([item[0].trim(), ''] as PlaylistItem)
+        // If only one line, no artist or album
+        playlist.push([item[0].trim(), [], ''] as PlaylistItem)
       }
     }
 
