@@ -6,8 +6,8 @@ interface EpisodesBadgeProps {
 }
 
 /**
- * Anime 集数 Badge 组件
- * 支持深色和浅色两种变体
+ * Anime Episodes Badge component
+ * Supports dark and light variants
  */
 export default function EpisodesBadge({ episodes, variant = 'dark' }: EpisodesBadgeProps) {
   if (variant === 'light') {

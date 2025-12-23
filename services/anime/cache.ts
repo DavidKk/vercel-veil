@@ -1,5 +1,5 @@
 import type { Anime } from '@/services/anilist/types'
-import { getGistInfo, readGistFile, writeGistFile } from '@/services/gist'
+import { getGistInfo, readGistFile, writeGistFile, writeGistFiles } from '@/services/gist'
 import { info, warn } from '@/services/logger'
 
 import { DATA_VALIDITY_DURATION, GIST_FILE_NAME, RESULT_CACHE_KEY, UPDATE_WINDOW_DURATION, UPDATE_WINDOWS } from './constants'
@@ -248,6 +248,64 @@ export function setResultToCache(anime: Anime[]): void {
     timestamp: Date.now(),
   })
   info(`Anime cache set: ${anime.length} anime`)
+}
+
+/**
+ * Clear result cache (in-memory only)
+ */
+export function clearResultCache(): void {
+  resultCache.delete(RESULT_CACHE_KEY)
+  info('Anime result cache cleared')
+}
+
+/**
+ * Delete anime cache from GIST
+ * This will force a fresh data fetch on the next request
+ * If file doesn't exist, returns successfully (no-op)
+ */
+export async function deleteAnimeFromGist(): Promise<void> {
+  const { gistId, gistToken } = getGistInfo()
+
+  // First check if file exists
+  try {
+    await readGistFile({
+      gistId,
+      gistToken,
+      fileName: GIST_FILE_NAME,
+    })
+    // File exists, proceed with deletion
+  } catch (error) {
+    // File not found - that's fine, nothing to delete
+    if (error instanceof Error && error.message.includes('not found')) {
+      info('Anime cache file not found in GIST, nothing to delete')
+      return
+    }
+    // Other errors (network, auth, etc.) should propagate
+    throw error
+  }
+
+  // File exists, delete it
+  try {
+    await writeGistFiles({
+      gistId,
+      gistToken,
+      files: [
+        {
+          file: GIST_FILE_NAME,
+          content: null, // null means delete the file
+        },
+      ],
+    })
+    info('Anime cache deleted from GIST')
+  } catch (error) {
+    // If deletion fails because file doesn't exist (race condition), that's OK
+    if (error instanceof Error && (error.message.includes('not found') || error.message.includes('404'))) {
+      info('Anime cache file was already deleted or not found')
+      return
+    }
+    // Other errors should propagate
+    throw error
+  }
 }
 
 /**

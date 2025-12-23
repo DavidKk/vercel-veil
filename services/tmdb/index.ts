@@ -363,6 +363,85 @@ export async function searchMulti(title: string, options: SearchOptions = {}): P
 }
 
 /**
+ * Search TV series by title and year
+ * @param title TV series title
+ * @param year Release year (optional)
+ * @param options Search options
+ * @returns TV search results
+ */
+export async function searchTV(title: string, year?: number, options: SearchOptions = {}): Promise<SearchResult[] | null> {
+  const apiKey = getTmdbApiKey()
+
+  const language = options.language ?? process.env.TMDB_LANGUAGE ?? 'zh-CN'
+
+  try {
+    info(`TMDB search TV start: ${title}${year ? ` (year: ${year})` : ''}`)
+
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      query: title,
+      include_adult: 'false',
+      language,
+    })
+
+    if (year) {
+      params.set('first_air_date_year', String(year))
+    }
+
+    const apiUrl = `${TMDB.API_BASE_URL}/search/tv?${params.toString()}`
+    const data = await fetchJsonWithCache<SearchResponse>(apiUrl, {
+      headers: {
+        accept: 'application/json',
+      },
+      cacheDuration: TMDB_CACHE.SEARCH,
+    })
+
+    if (!data || !Array.isArray(data.results) || data.results.length === 0) {
+      warn(`TMDB search TV empty result for "${title}"${year ? ` (year: ${year})` : ''}`)
+      return []
+    }
+
+    info(`TMDB search TV success: ${title}${year ? ` (year: ${year})` : ''}, results=${data.results.length}`)
+    return data.results
+  } catch (error) {
+    fail(`TMDB search TV error for "${title}":`, error)
+    return null
+  }
+}
+
+/**
+ * Get external IDs for a TV series
+ * @param tvId TMDB TV ID
+ * @returns External IDs including TVDB ID, or null if not found
+ */
+export async function getTVExternalIds(tvId: number): Promise<{ tvdb_id?: number; imdb_id?: string; [key: string]: any } | null> {
+  const apiKey = getTmdbApiKey()
+
+  try {
+    info(`TMDB get TV external IDs start: ${tvId}`)
+
+    const apiUrl = `${TMDB.API_BASE_URL}/tv/${tvId}/external_ids?api_key=${apiKey}`
+    const data = await fetchJsonWithCache<{ tvdb_id?: number; imdb_id?: string; [key: string]: any }>(apiUrl, {
+      headers: {
+        accept: 'application/json',
+      },
+      cacheDuration: TMDB_CACHE.MOVIE_DETAILS,
+    })
+
+    if (!data) {
+      warn(`TMDB get TV external IDs empty result for TV ${tvId}`)
+      return null
+    }
+
+    info(`TMDB get TV external IDs success: TV ${tvId}, tvdb_id=${data.tvdb_id || 'N/A'}`)
+    return data
+  } catch (error) {
+    fail(`TMDB get TV external IDs error for TV ${tvId}:`, error)
+    return null
+  }
+}
+
+/**
  * Get session ID from environment variable
  */
 function getSessionId(): string | null {

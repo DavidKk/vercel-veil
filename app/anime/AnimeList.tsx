@@ -12,12 +12,11 @@ type SortOption = 'score' | 'popularity' | 'trending' | ''
 
 interface AnimeListProps {
   anime: Anime[]
-  favoriteAvailable: boolean
   favoriteIds: Set<number>
   shareToken?: string
 }
 
-export default function AnimeList({ anime, favoriteAvailable, favoriteIds, shareToken }: AnimeListProps) {
+export default function AnimeList({ anime, favoriteIds, shareToken }: AnimeListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('')
 
   // Filter anime: only keep those with score or popularity data
@@ -91,10 +90,10 @@ export default function AnimeList({ anime, favoriteAvailable, favoriteIds, share
       {/* Anime Masonry Layout - Desktop only */}
       <div className="columns-1 gap-4 lg:columns-3 2xl:columns-4">
         {sortedAnime.map((item) => {
-          const isFavorited = item.tmdbId ? favoriteIds.has(item.tmdbId) : false
+          const isFavorited = item.anilistId ? favoriteIds.has(item.anilistId) : false
           return (
             <div key={`${item.source}-${item.anilistId}`} className="break-inside-avoid mb-6">
-              <AnimeCard anime={item} favoriteAvailable={favoriteAvailable} isFavorited={isFavorited} shareToken={shareToken} />
+              <AnimeCard anime={item} isFavorited={isFavorited} shareToken={shareToken} />
             </div>
           )
         })}

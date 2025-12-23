@@ -23,7 +23,7 @@ export default function MoviesFooter() {
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-white/10 border border-white/10"
             >
-              <span>猫眼</span>
+              <span>Maoyan</span>
               <ExternalLink size={12} />
             </a>
             <a

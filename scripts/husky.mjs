@@ -26,21 +26,21 @@ export const husky = async (options = {}) => {
     return
   }
 
-  // Husky v9+ 使用新的方式：直接创建 hook 文件
-  // 首先初始化 husky（使用 husky install 或 husky init）
+  // Husky v9+ uses a new approach: directly create hook files
+  // First initialize husky (using husky install or husky init)
   try {
-    // 尝试使用 husky init（v9+ 推荐方式）
+    // Try using husky init (recommended for v9+)
     execSync('husky init', { stdio: 'pipe', cwd })
   } catch (error) {
-    // 如果 husky init 失败，尝试 husky install
+    // If husky init fails, try husky install
     try {
       execSync('husky install', { stdio: 'pipe', cwd })
     } catch (installError) {
-      // 如果都失败，手动创建 .husky 目录
+      // If both fail, manually create .husky directory
       if (!fs.existsSync(huskyHooksPath)) {
         await fs.promises.mkdir(huskyHooksPath, { recursive: true })
       }
-      // 创建 _/husky.sh 文件（husky 需要的辅助脚本）
+      // Create _/husky.sh file (helper script required by husky)
       const huskyShPath = path.join(huskyHooksPath, '_', 'husky.sh')
       const huskyShDir = path.dirname(huskyShPath)
       if (!fs.existsSync(huskyShDir)) {
@@ -92,42 +92,42 @@ fi
     }
   }
 
-  // 根据平台生成不同的 hook 内容
-  // Windows 下 Git GUI 可能 PATH 不完整，需要确保能找到 pnpm
+  // Generate different hook content based on platform
+  // Windows Git GUI may have incomplete PATH, need to ensure pnpm can be found
   const isWindows = inPlatform('win32')
 
-  // Windows 下使用 Git Bash，需要确保 PATH 包含系统 PATH
-  // Unix 系统也需要确保 PATH 正确（Git GUI 可能 PATH 不完整）
-  // 这个设置是为了解决 Git GUI 工具（如 SourceTree, GitHub Desktop 等）运行时 PATH 不完整的问题
+  // On Windows using Git Bash, need to ensure PATH includes system PATH
+  // Unix systems also need to ensure PATH is correct (Git GUI may have incomplete PATH)
+  // This setting is to solve the problem of incomplete PATH when Git GUI tools (such as SourceTree, GitHub Desktop, etc.) run
   const pathSetup = isWindows
-    ? `# Windows Git GUI 环境变量可能不完整，需要手动设置 PATH
-# 确保包含系统 PATH（Git GUI 可能只提供最小 PATH）
+    ? `# Windows Git GUI environment variables may be incomplete, need to manually set PATH
+# Ensure system PATH is included (Git GUI may only provide minimal PATH)
 export PATH="$PATH":$PATH
-# Windows 下 pnpm 的常见安装位置
+# Common pnpm installation locations on Windows
 if [ -n "$USERPROFILE" ] && [ -d "$USERPROFILE/AppData/Local/pnpm" ]; then
   export PATH="$USERPROFILE/AppData/Local/pnpm:$PATH"
 fi
 if [ -n "$HOME" ] && [ -d "$HOME/AppData/Local/pnpm" ]; then
   export PATH="$HOME/AppData/Local/pnpm:$PATH"
 fi
-# 尝试从 npm 全局路径找到 pnpm
+# Try to find pnpm from npm global path
 if command -v npm >/dev/null 2>&1; then
   npm_prefix=$(npm config get prefix 2>/dev/null)
   if [ -n "$npm_prefix" ] && [ -d "$npm_prefix" ]; then
     export PATH="$npm_prefix:$PATH"
   fi
 fi`
-    : `# Git GUI 环境变量可能不完整，需要手动设置 PATH
-# 确保包含系统 PATH（Git GUI 可能只提供最小 PATH）
+    : `# Git GUI environment variables may be incomplete, need to manually set PATH
+# Ensure system PATH is included (Git GUI may only provide minimal PATH)
 export PATH="$PATH":$PATH
-# Unix 系统下 pnpm 的常见安装位置
+# Common pnpm installation locations on Unix systems
 if [ -d "$HOME/.local/share/pnpm" ]; then
   export PATH="$HOME/.local/share/pnpm:$PATH"
 fi
 if [ -d "$HOME/.pnpm" ]; then
   export PATH="$HOME/.pnpm:$PATH"
 fi
-# 尝试从 npm 全局路径找到 pnpm
+# Try to find pnpm from npm global path
 if command -v npm >/dev/null 2>&1; then
   npm_prefix=$(npm config get prefix 2>/dev/null)
   if [ -n "$npm_prefix" ] && [ -d "$npm_prefix" ]; then
@@ -135,7 +135,7 @@ if command -v npm >/dev/null 2>&1; then
   fi
 fi`
 
-  // 定义 hooks 配置
+  // Define hooks configuration
   const hooks = [
     {
       name: 'pre-commit',
@@ -159,16 +159,16 @@ pnpm commitlint --edit "$1"
     },
   ]
 
-  // 创建 hook 文件
+  // Create hook files
   for (const hook of hooks) {
     const hookPath = path.join(huskyHooksPath, hook.name)
 
-    // 确保 .husky 目录存在
+    // Ensure .husky directory exists
     if (!fs.existsSync(huskyHooksPath)) {
       await fs.promises.mkdir(huskyHooksPath, { recursive: true })
     }
 
-    // 写入 hook 文件
+    // Write hook file
     await fs.promises.writeFile(hookPath, hook.content, { mode: 0o755 })
     info(`Created ${path.relative(cwd, hookPath)}`)
   }

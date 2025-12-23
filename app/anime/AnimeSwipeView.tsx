@@ -8,19 +8,18 @@ import ShareModal from './components/ShareModal'
 
 interface AnimeSwipeViewProps {
   anime: Anime[]
-  favoriteAvailable: boolean
   favoriteIds: Set<number>
   shareToken?: string
 }
 
-export default function AnimeSwipeView({ anime, favoriteAvailable, favoriteIds, shareToken }: AnimeSwipeViewProps) {
+export default function AnimeSwipeView({ anime, favoriteIds, shareToken }: AnimeSwipeViewProps) {
   return (
     <SwipeView
       items={anime}
       getImageUrl={(item) => item.tmdbPoster || item.coverImage || null}
       renderItem={(item) => {
-        const isFavorited = item.tmdbId ? favoriteIds.has(item.tmdbId) : false
-        return <AnimeSwipeCard anime={item} favoriteAvailable={favoriteAvailable} isFavorited={isFavorited} shareToken={shareToken} />
+        const isFavorited = item.anilistId ? favoriteIds.has(item.anilistId) : false
+        return <AnimeSwipeCard anime={item} isFavorited={isFavorited} shareToken={shareToken} />
       }}
       getItemKey={(item) => `${item.source}-${item.anilistId}`}
       shareModal={<ShareModal isOpen={false} onClose={() => {}} />}

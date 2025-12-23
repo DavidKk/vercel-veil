@@ -6,14 +6,13 @@ import type { AlertImperativeHandler } from '@/components/Alert'
 interface UseFavoriteAnimeOptions {
   initialIsFavorited: boolean
   animeId?: number
-  favoriteAvailable: boolean
   alertRef: React.RefObject<AlertImperativeHandler | null>
 }
 
 /**
  * Custom hook for managing anime favorite state and actions
  */
-export function useFavoriteAnime({ initialIsFavorited, animeId, favoriteAvailable, alertRef }: UseFavoriteAnimeOptions) {
+export function useFavoriteAnime({ initialIsFavorited, animeId, alertRef }: UseFavoriteAnimeOptions) {
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [isFavoriting, setIsFavoriting] = useState(false)
   const hasUserInteracted = useRef(false)
@@ -26,7 +25,7 @@ export function useFavoriteAnime({ initialIsFavorited, animeId, favoriteAvailabl
   }, [initialIsFavorited, animeId]) // Reset when anime changes
 
   const handleFavorite = async () => {
-    if (!animeId || isFavoriting || !favoriteAvailable) return
+    if (!animeId || isFavoriting) return
 
     // Mark that user has interacted
     hasUserInteracted.current = true

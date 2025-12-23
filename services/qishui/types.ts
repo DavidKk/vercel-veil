@@ -1,7 +1,7 @@
 /**
- * Playlist item, format: [song title, artist/album information]
+ * Playlist item, format: [song title, artists array, album]
  */
-export type PlaylistItem = [string, string]
+export type PlaylistItem = [string, string[], string]
 
 /**
  * Playlist data, two-dimensional array

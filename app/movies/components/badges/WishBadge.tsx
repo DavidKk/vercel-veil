@@ -8,7 +8,7 @@ interface WishBadgeProps {
 }
 
 /**
- * 愿望/投票数 Badge 组件
+ * Wish/Vote Count Badge component
  */
 export default function WishBadge({ wish = 0, tmdbVoteCount = 0 }: WishBadgeProps) {
   const displayCount = Math.max(wish, tmdbVoteCount)

@@ -25,7 +25,7 @@ export default function SwipeView<T>({
   getItemKey,
   shareModal,
   shareToken,
-  emptyMessage = { title: 'No items available', description: 'Please try again later' },
+  emptyMessage = { title: 'No items available', description: 'Please try later' },
 }: SwipeViewProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -90,7 +90,7 @@ export default function SwipeView<T>({
     }
   }, [])
 
-  // Calculate scroll progress for background transition
+  // Calculate scroll progress for background transition and detect near bottom
   useEffect(() => {
     const container = containerRef.current
     if (!container) return

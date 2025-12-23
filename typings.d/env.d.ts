@@ -89,8 +89,19 @@ declare namespace NodeJS {
     DOUBAN_RSS_URL?: string
 
     /** AniList Access Token (optional, for better rate limits) */
-    /** Get from: https://anilist.co/settings/developer */
-    /** Note: AniList GraphQL API is public, but using access token improves rate limits */
+    /**
+     * How to get:
+     * Option 1 (Recommended): Personal Access Token
+     *   - Go to: https://anilist.co/settings/developer
+     *   - Generate a Personal Access Token directly
+     *
+     * Option 2: OAuth Authorization Code Grant
+     *   - Reference: https://docs.anilist.co/guide/auth/authorization-code
+     *   - Create an application and use OAuth flow to get access token
+     *
+     * Note: AniList GraphQL API is public, but using access token improves rate limits
+     * Default validity period: 1 year
+     */
     ANILIST_ACCESS_TOKEN?: string
   }
 }

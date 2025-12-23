@@ -7,8 +7,8 @@ interface AnimeYearBadgeProps {
 }
 
 /**
- * Anime 年份 Badge 组件
- * 支持深色和浅色两种变体
+ * Anime Year Badge component
+ * Supports dark and light variants
  */
 export default function AnimeYearBadge({ year, tooltip = 'Start Year', variant = 'light' }: AnimeYearBadgeProps) {
   return (

@@ -4,8 +4,8 @@ interface GenreBadgeProps {
 }
 
 /**
- * 类型 Badge 组件
- * 支持深色和浅色两种变体
+ * Genre Badge component
+ * Supports dark and light variants
  */
 export default function GenreBadge({ genre, variant = 'dark' }: GenreBadgeProps) {
   if (variant === 'light') {

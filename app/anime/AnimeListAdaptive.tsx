@@ -8,18 +8,17 @@ import AnimeListMobile from './AnimeListMobile'
 
 interface AnimeListAdaptiveProps {
   anime: Anime[]
-  favoriteAvailable: boolean
   favoriteIds: Set<number>
   shareToken?: string
   initialIsMobile: boolean
 }
 
-export default function AnimeListAdaptive({ anime, favoriteAvailable, favoriteIds, shareToken, initialIsMobile }: AnimeListAdaptiveProps) {
+export default function AnimeListAdaptive({ anime, favoriteIds, shareToken, initialIsMobile }: AnimeListAdaptiveProps) {
   const isMobile = useIsMobile(initialIsMobile)
 
   if (isMobile) {
-    return <AnimeListMobile anime={anime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} shareToken={shareToken} />
+    return <AnimeListMobile anime={anime} favoriteIds={favoriteIds} shareToken={shareToken} />
   }
 
-  return <AnimeList anime={anime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} shareToken={shareToken} />
+  return <AnimeList anime={anime} favoriteIds={favoriteIds} shareToken={shareToken} />
 }

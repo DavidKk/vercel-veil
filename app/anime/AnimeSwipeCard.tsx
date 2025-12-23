@@ -8,18 +8,17 @@ import Alert from '@/components/Alert'
 import LazyImage from '@/components/LazyImage'
 import type { Anime } from '@/services/anilist/types'
 
-import { AniListBadge, AnimeGenreBadge, AnimeScoreBadge, AnimeYearBadge, EpisodesBadge, PopularityBadge } from './components/badges'
+import { AniListBadge, AnimeGenreBadge, AnimeScoreBadge, AnimeYearBadge, EpisodesBadge, PopularityBadge, TMDBBadge } from './components/badges'
 import { useFavoriteAnime } from './hooks/useFavoriteAnime'
-import { formatAnimeTitle } from './utils/animeHelpers'
+import { cleanDescription, formatAnimeTitle, getAssociatedTitle } from './utils/animeHelpers'
 
 interface AnimeSwipeCardProps {
   anime: Anime
-  favoriteAvailable: boolean
   isFavorited: boolean
   shareToken?: string
 }
 
-export default function AnimeSwipeCard({ anime, favoriteAvailable, isFavorited: initialIsFavorited }: AnimeSwipeCardProps) {
+export default function AnimeSwipeCard({ anime, isFavorited: initialIsFavorited }: AnimeSwipeCardProps) {
   const coverImageUrl = anime.coverImage
   const title = formatAnimeTitle(anime)
   const alertRef = useRef<AlertImperativeHandler>(null)
@@ -27,8 +26,7 @@ export default function AnimeSwipeCard({ anime, favoriteAvailable, isFavorited: 
 
   const { isFavorited, isFavoriting, handleFavorite } = useFavoriteAnime({
     initialIsFavorited,
-    animeId: anime.tmdbId,
-    favoriteAvailable,
+    animeId: anime.anilistId,
     alertRef,
   })
 
@@ -39,6 +37,10 @@ export default function AnimeSwipeCard({ anime, favoriteAvailable, isFavorited: 
 
   // Format score (0-100 to 0-10)
   const formattedScore = anime.averageScore ? anime.averageScore / 10 : null
+
+  // Get priority description: Chinese description from TMDB/TVDB > original description
+  const priorityDescription = anime.tmdbDescription || anime.tvdbDescription || anime.description
+  const hasChineseDescription = !!(anime.tmdbDescription || anime.tvdbDescription)
 
   return (
     <div className="relative flex h-full w-full flex-col text-white">
@@ -59,8 +61,17 @@ export default function AnimeSwipeCard({ anime, favoriteAvailable, isFavorited: 
             <div className="flex items-center gap-3 flex-shrink-0 max-h-[25vh] overflow-hidden" style={{ display: isDetailsExpanded ? 'none' : 'flex' }}>
               <div className="flex-1 flex flex-col gap-2 min-w-0">
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight">{title}</h2>
+                {/* TMDB/TVDB Title below main title (only if different from main title) */}
+                {(() => {
+                  const associatedTitle = getAssociatedTitle(anime)
+                  return associatedTitle ? (
+                    <p className="text-sm sm:text-base font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">{associatedTitle}</p>
+                  ) : null
+                })()}
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   {anime.anilistUrl && <AniListBadge url={anime.anilistUrl} />}
+                  {/* TMDB Badge */}
+                  {anime.tmdbUrl && <TMDBBadge url={anime.tmdbUrl} />}
                   {anime.startDate?.year && <AnimeYearBadge year={anime.startDate.year} tooltip="Start Year" variant="dark" />}
                   {formattedScore && <AnimeScoreBadge score={anime.averageScore!} variant="dark" />}
                   {anime.popularity && anime.popularity > 0 && <PopularityBadge popularity={anime.popularity} variant="dark" />}
@@ -77,21 +88,46 @@ export default function AnimeSwipeCard({ anime, favoriteAvailable, isFavorited: 
               </div>
             </div>
 
-            {/* Description */}
-            {anime.description && (
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <p
-                  className={`text-sm sm:text-base leading-relaxed text-white/90 whitespace-pre-line ${isDetailsExpanded ? '' : 'line-clamp-6'}`}
-                  onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {anime.description.replace(/<[^>]*>/g, '')}
-                </p>
+            {/* Description - Priority: Chinese description from TMDB/TVDB > original description */}
+            {priorityDescription && (
+              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
+                {hasChineseDescription ? (
+                  // Show TMDB or TVDB description with source label
+                  <>
+                    {anime.tmdbDescription && (
+                      <p
+                        className={`text-sm sm:text-base leading-relaxed text-white/80 whitespace-pre-line ${isDetailsExpanded ? '' : 'line-clamp-6'}`}
+                        onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {cleanDescription(anime.tmdbDescription)}
+                      </p>
+                    )}
+                    {!anime.tmdbDescription && anime.tvdbDescription && (
+                      <p
+                        className={`text-sm sm:text-base leading-relaxed text-white/80 whitespace-pre-line ${isDetailsExpanded ? '' : 'line-clamp-6'}`}
+                        onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {cleanDescription(anime.tvdbDescription)}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  // Show original AniList description (no label)
+                  <p
+                    className={`text-sm sm:text-base leading-relaxed text-white/90 whitespace-pre-line ${isDetailsExpanded ? '' : 'line-clamp-6'}`}
+                    onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {cleanDescription(anime.description)}
+                  </p>
+                )}
               </div>
             )}
 
             {/* Favorite Button */}
-            {anime.tmdbId && favoriteAvailable && (
+            {
               <div className="flex-shrink-0 pt-2">
                 <button
                   onClick={handleFavorite}
@@ -99,13 +135,13 @@ export default function AnimeSwipeCard({ anime, favoriteAvailable, isFavorited: 
                   className={`flex w-full items-center justify-center gap-2 rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
                     isFavorited ? 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700' : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
                   } disabled:cursor-not-allowed disabled:opacity-50`}
-                  title={isFavorited ? 'Remove from favorites' : 'Add to TMDB favorites'}
+                  title={isFavorited ? 'Remove from Planning to Watch' : 'Add to Planning to Watch'}
                 >
                   <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
-                  <span>{isFavoriting ? 'Processing...' : isFavorited ? 'Favorited' : 'Favorite'}</span>
+                  <span>{isFavoriting ? 'Processing...' : isFavorited ? 'In List' : 'Add to List'}</span>
                 </button>
               </div>
-            )}
+            }
           </div>
         </div>
       </div>

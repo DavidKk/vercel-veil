@@ -7,12 +7,11 @@ import { filterAnimeWithScoreOrPopularity } from './utils/animeHelpers'
 
 interface AnimeListMobileProps {
   anime: Anime[]
-  favoriteAvailable: boolean
   favoriteIds: Set<number>
   shareToken?: string
 }
 
-export default function AnimeListMobile({ anime, favoriteAvailable, favoriteIds, shareToken }: AnimeListMobileProps) {
+export default function AnimeListMobile({ anime, favoriteIds, shareToken }: AnimeListMobileProps) {
   // Filter anime: only keep those with score or popularity data
   const filteredAnime = filterAnimeWithScoreOrPopularity(anime)
 
@@ -27,5 +26,5 @@ export default function AnimeListMobile({ anime, favoriteAvailable, favoriteIds,
     )
   }
 
-  return <AnimeSwipeView anime={filteredAnime} favoriteAvailable={favoriteAvailable} favoriteIds={favoriteIds} shareToken={shareToken} />
+  return <AnimeSwipeView anime={filteredAnime} favoriteIds={favoriteIds} shareToken={shareToken} />
 }

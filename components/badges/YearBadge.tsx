@@ -6,7 +6,7 @@ interface YearBadgeProps {
 }
 
 /**
- * 年份 Badge 组件
+ * Year Badge component
  */
 export default function YearBadge({ year, tooltip = 'Release Year' }: YearBadgeProps) {
   return <Badge tooltip={tooltip}>{year}</Badge>
