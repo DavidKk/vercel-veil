@@ -44,7 +44,7 @@ async function getRealMoviesDataForPreview(): Promise<Record<string, string> | n
     const currentDate = new Date().toISOString().split('T')[0]
 
     // Generate a single real share token for preview (same as production)
-    const previewShareToken = generateShareToken('movie-share', '1d')
+    const previewShareToken = await generateShareToken('movie-share', '1d')
 
     // Prepare movies data for template (limit to 6 for preview)
     const moviesForTemplate = buildMoviesForTemplate(newMovies, previewShareToken, baseUrl, 6)

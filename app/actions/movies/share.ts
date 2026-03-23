@@ -1,6 +1,6 @@
 'use server'
 
-import jwt from 'jsonwebtoken'
+import { errors as joseErrors, jwtVerify } from 'jose'
 
 import { fail, info } from '@/services/logger'
 import { isRadarrConfigured, syncToRadarrAsync } from '@/services/radarr'
@@ -12,6 +12,8 @@ const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
   throw new Error('process.env.JWT_SECRET is not defined')
 }
+
+const JWT_SECRET_KEY = new TextEncoder().encode(JWT_SECRET)
 
 /**
  * Generate a share token for temporary favorite access (1 day validity)
@@ -42,7 +44,7 @@ export async function generateShareToken(): Promise<{ success: boolean; token?: 
     }
 
     // Generate token with 1 day expiration
-    const token = createShareToken('movie-share', '1d')
+    const token = await createShareToken('movie-share', '1d')
     const path = `/movies/share/${token}`
 
     const duration = Date.now() - startTime
@@ -75,22 +77,20 @@ export async function verifyShareToken(token: string): Promise<{ valid: boolean;
       return { valid: false, error: 'Token is required' }
     }
 
-    const payload = jwt.verify(token, JWT_SECRET) as any
+    const { payload } = await jwtVerify(token, JWT_SECRET_KEY)
 
     // Verify token type
-    if (payload.type !== 'movie-share') {
+    if ((payload as any).type !== 'movie-share') {
       return { valid: false, error: 'Invalid token type' }
     }
 
     return { valid: true, payload }
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
+    if (error instanceof joseErrors.JWTExpired || (error as any).code === 'ERR_JWT_EXPIRED') {
       return { valid: false, error: 'Token expired' }
     }
-    if (error instanceof jwt.JsonWebTokenError) {
-      return { valid: false, error: 'Invalid token' }
-    }
-    return { valid: false, error: 'Token verification failed' }
+
+    return { valid: false, error: 'Invalid token' }
   }
 }
 

@@ -97,7 +97,7 @@ export const GET = cron(async (req: NextRequest) => {
   )
 
   // Generate a single share token for the entire email
-  const shareToken = generateShareToken('movie-share', '1d')
+  const shareToken = await generateShareToken('movie-share', '1d')
   const baseUrl = getBaseUrl(req)
   const shareUrl = `${baseUrl}/movies/share/${shareToken}`
 

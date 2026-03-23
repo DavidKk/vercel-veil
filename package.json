@@ -16,9 +16,9 @@
     "format": "prettier --config .prettierrc.js --write \"**/*.{js,jsx,ts,tsx,d.ts,vue,md,json,yml,yaml,.html,.hbs}\"",
     "lint": "pnpm lint:ts",
     "lint:ts": "eslint -c eslint.config.mjs --fix .",
-    "dev": "next dev",
-    "dev:e2e": "next dev --hostname 127.0.0.1 --port 3000",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "dev:e2e": "next dev --webpack --hostname 127.0.0.1 --port 3000",
+    "build": "next build --webpack",
     "start": "next start",
     "test": "jest -c ./jest.config.ts --coverage --reporters=default --reporters=jest-junit --passWithNoTests",
     "test:e2e": "playwright test --reporter=list",
@@ -38,13 +38,14 @@
     "feather-icons-react": "^0.8.1",
     "handlebars": "^4.7.8",
     "htmlparser2": "^10.0.0",
-    "jsonwebtoken": "^9.0.2",
+    "jose": "^6.2.1",
     "marked": "^15.0.12",
-    "next": "15.5.9",
+    "next": "16.2.1",
     "otplib": "^12.0.1",
-    "react": "^19.1.2",
-    "react-dom": "^19.1.2",
-    "xmlbuilder2": "^3.1.1"
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "xmlbuilder2": "^3.1.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.3.0",
@@ -55,10 +56,9 @@
     "@types/chalk": "^2.2.0",
     "@types/handlebars": "^4.1.0",
     "@types/jest": "^29.5.12",
-    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^7.16.1",
     "@typescript-eslint/parser": "^7.16.1",
     "chalk": "^5.3.0",
@@ -67,7 +67,7 @@
     "cz-customizable": "^7.2.1",
     "cz-customizable-i18n-config": "^0.0.1-alpha.2",
     "eslint": "^9",
-    "eslint-config-next": "15.5.9",
+    "eslint-config-next": "16.2.1",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-prettier": "^5.2.1",
@@ -92,5 +92,5 @@
     "typescript": "^5",
     "typescript-transform-paths": "^3.4.7"
   },
-  "packageManager": "pnpm@10.25.0+sha512.5e82639027af37cf832061bcc6d639c219634488e0f2baebe785028a793de7b525ffcd3f7ff574f5e9860654e098fe852ba8ac5dd5cefe1767d23a020a92f501"
+  "packageManager": "pnpm@10.30.2+sha512.36cdc707e7b7940a988c9c1ecf88d084f8514b5c3f085f53a2e244c2921d3b2545bc20dd4ebe1fc245feec463bb298aecea7a63ed1f7680b877dc6379d8d0cb4"
 }

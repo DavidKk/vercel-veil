@@ -20,7 +20,7 @@ export async function validateCookie() {
   }
 
   const token = authInfo.value
-  const user = token ? verifyToken(token) : null
+  const user = token ? await verifyToken(token) : null
   if (!user) {
     return false
   }
