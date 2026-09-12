@@ -4,8 +4,8 @@ import { parseDocument } from 'htmlparser2'
 import { fetchWithCache } from '@/services/fetch'
 import { fail, info, warn } from '@/services/logger'
 
-import { QISHUI_HEADERS, QISHUI_PLAYLIST_SELECTOR } from './constants'
-import type { Playlist, PlaylistItem } from './types'
+import { QISHUI_HEADERS, QISHUI_PLAYLIST_SELECTOR, QISHUI_ROUTER_DATA_MARKER } from './constants'
+import type { Playlist, PlaylistItem, QishuiMedia, QishuiRouterData } from './types'
 
 export * from './types'
 
@@ -67,19 +67,154 @@ function extractTextContent(element: any): string {
 }
 
 /**
- * Parse Qishui music playlist HTML
+ * Extract artist display names from Qishui artist objects
+ * @param artists Artist list from track or video entity
+ * @returns Comma-separated artist names
+ */
+function formatArtistNames(artists: Array<{ name?: string | null; simple_display_name?: string | null; user_info?: { nickname?: string | null } }> | undefined): string {
+  if (!Array.isArray(artists) || artists.length === 0) {
+    return ''
+  }
+
+  return artists
+    .map((artist) => artist.name?.trim() || artist.simple_display_name?.trim() || artist.user_info?.nickname?.trim() || '')
+    .filter(Boolean)
+    .join(', ')
+}
+
+/**
+ * Convert a Qishui media item into playlist item format
+ * @param media Media item from _ROUTER_DATA
+ * @returns Playlist item or null when title is missing
+ */
+function mediaToPlaylistItem(media: QishuiMedia): PlaylistItem | null {
+  if (media.type === 'track') {
+    const track = media.entity?.track
+    const title = track?.name?.trim()
+    if (!title) {
+      return null
+    }
+
+    const artists = formatArtistNames(track.artists)
+    const album = track.album?.name?.trim() || ''
+    const artistInfo = [artists, album].filter(Boolean).join(' • ')
+    return [title, artistInfo]
+  }
+
+  if (media.type === 'video') {
+    const video = media.entity?.video
+    const title = video?.title?.trim()
+    if (!title) {
+      return null
+    }
+
+    const artists = formatArtistNames(video.artists)
+    return [title, artists]
+  }
+
+  return null
+}
+
+/**
+ * Parse playlist from Modern.js _ROUTER_DATA embedded in the share page
+ * @param html HTML string
+ * @returns Parsed playlist data, or null when router data is unavailable
+ */
+export function parseQishuiPlaylistFromRouterData(html: string): Playlist | null {
+  const markerIndex = html.indexOf(QISHUI_ROUTER_DATA_MARKER)
+  if (markerIndex < 0) {
+    return null
+  }
+
+  const jsonStart = html.indexOf('{', markerIndex)
+  if (jsonStart < 0) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(extractJsonObject(html, jsonStart)) as QishuiRouterData
+    const medias = parsed.loaderData?.playlist_page?.medias
+    if (!Array.isArray(medias) || medias.length === 0) {
+      warn('No medias found in Qishui _ROUTER_DATA')
+      return []
+    }
+
+    const playlist: Playlist = []
+    for (const media of medias) {
+      const item = mediaToPlaylistItem(media)
+      if (item) {
+        playlist.push(item)
+      }
+    }
+
+    info(`Parsed ${playlist.length} songs from Qishui _ROUTER_DATA`)
+    return playlist
+  } catch (error) {
+    warn('Failed to parse Qishui _ROUTER_DATA:', error)
+    return null
+  }
+}
+
+/**
+ * Extract a balanced JSON object starting at the given index
+ * @param source Source string containing JSON
+ * @param startIndex Index of the opening brace
+ * @returns JSON object substring
+ */
+function extractJsonObject(source: string, startIndex: number): string {
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = startIndex; i < source.length; i++) {
+    const char = source[i]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+        continue
+      }
+      if (char === '\\') {
+        escaped = true
+        continue
+      }
+      if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+      continue
+    }
+
+    if (char === '{') {
+      depth += 1
+      continue
+    }
+
+    if (char === '}') {
+      depth -= 1
+      if (depth === 0) {
+        return source.slice(startIndex, i + 1)
+      }
+    }
+  }
+
+  throw new Error('Unterminated JSON object in Qishui HTML')
+}
+
+/**
+ * Parse Qishui music playlist from rendered DOM text (legacy fallback)
  * @param html HTML string
  * @returns Parsed playlist data
  */
-export function parseQishuiPlaylist(html: string): Playlist {
-  info('Parsing Qishui playlist HTML')
+export function parseQishuiPlaylistFromDom(html: string): Playlist {
+  info('Parsing Qishui playlist HTML via DOM fallback')
 
   try {
-    // Parse HTML
     const document = parseDocument(html)
-
-    // Use CSS selector to find target element
-    // Selector: #root > div > div > div > div > div:nth-child(2)
     const targetElement = selectOne(QISHUI_PLAYLIST_SELECTOR, document)
 
     if (!targetElement) {
@@ -87,7 +222,6 @@ export function parseQishuiPlaylist(html: string): Playlist {
       return []
     }
 
-    // Extract text content (simulate innerText)
     const textContent = extractTextContent(targetElement)
 
     if (!textContent || !textContent.trim()) {
@@ -95,33 +229,46 @@ export function parseQishuiPlaylist(html: string): Playlist {
       return []
     }
 
-    // Process text according to user-provided logic
+    // Process text according to numbered list layout:
     // `\n${q}`.split(/\n\d+\n/).map((item) => item.split('\n').filter(Boolean)).filter((item) => item.length)
     const processedText = `\n${textContent}`
     const parts = processedText.split(/\n\d+\n/)
-
-    // According to user logic: split each part by newline, filter empty strings, then filter empty arrays
     const items = parts.map((part) => part.split('\n').filter((line) => line.trim().length > 0)).filter((item) => item.length > 0)
 
     const playlist: Playlist = []
 
-    // Convert each item to playlist item format [song title, artist/album information]
     for (const item of items) {
       if (item.length >= 2) {
-        // First two lines: song title and artist/album information
         playlist.push([item[0].trim(), item[1].trim()] as PlaylistItem)
       } else if (item.length === 1) {
-        // If only one line, second item is empty string
         playlist.push([item[0].trim(), ''] as PlaylistItem)
       }
     }
 
-    info(`Parsed ${playlist.length} songs from playlist`)
+    info(`Parsed ${playlist.length} songs from playlist DOM`)
     return playlist
   } catch (error) {
     fail('Error parsing Qishui playlist HTML:', error)
     return []
   }
+}
+
+/**
+ * Parse Qishui music playlist HTML
+ * Prefers embedded _ROUTER_DATA, then falls back to DOM text scraping
+ * @param html HTML string
+ * @returns Parsed playlist data
+ */
+export function parseQishuiPlaylist(html: string): Playlist {
+  info('Parsing Qishui playlist HTML')
+
+  const fromRouterData = parseQishuiPlaylistFromRouterData(html)
+  if (fromRouterData !== null) {
+    return fromRouterData
+  }
+
+  warn('Qishui _ROUTER_DATA unavailable, falling back to DOM parsing')
+  return parseQishuiPlaylistFromDom(html)
 }
 
 /**
