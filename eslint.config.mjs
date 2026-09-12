@@ -8,7 +8,7 @@ import tsConfig from './eslintrc/ts.mjs'
 
 export default [
   {
-    ignores: ['.next/**/*', '.husky/**/*', 'coverage/**/*', 'node_modules'],
+    ignores: ['.next/**/*', '.husky/**/*', 'coverage/**/*', 'node_modules', 'next-env.d.ts'],
   },
   {
     languageOptions: {
@@ -43,7 +43,17 @@ export default [
       'eslint-plugin-import/no-extraneous-dependencies': [
         'warn',
         {
-          devDependencies: ['**/*.spec.ts', '**/*/jest.config.*.ts', 'eslintrc/**/*.mjs', 'scripts/**/*.mjs', 'jest/**/*.ts', '.cz-config.js', '**/eslint.config.mjs', '**/playwright.config.ts', '**/playwright-tsconfig.json'],
+          devDependencies: [
+            '**/*.spec.ts',
+            '**/*/jest.config.*.ts',
+            'eslintrc/**/*.mjs',
+            'scripts/**/*.mjs',
+            'jest/**/*.ts',
+            '.cz-config.js',
+            '**/eslint.config.mjs',
+            '**/playwright.config.ts',
+            '**/playwright-tsconfig.json',
+          ],
         },
       ],
       'eslint-plugin-simple-import-sort/exports': 'error',

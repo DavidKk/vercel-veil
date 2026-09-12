@@ -1,0 +1,23 @@
+---
+description: All project rules live in .ai/rules; read global.md first (minimal), then others as needed
+globs:
+---
+
+# Rules: .ai/rules (single source of truth)
+
+**Quick map (optional first):** **`.ai/INDEX.md`** — task/topic → which file to open; avoids scanning the whole `.ai` tree.
+
+**Always read:** **`.ai/rules/global.md`** — minimal global rules (code style, structure, where to look). Keep under ~1000 tokens so AI can load it every time.
+
+**New feature module / tool planning:** For veil, module/tool decisions are anchored by:
+- **`.ai/specs/access-semantics.md`** (private-by-default, share-scope exceptions, webhook/cron header secrets)
+- **`.ai/workflow/requirements-audit.md`** (mandatory checklist before non-trivial changes)
+- **`.ai/specs/modules-registry.yaml`** (module ids as a lightweight single source of truth)
+
+If the change requires MCP tool/function contract details, read:
+- **`.ai/specs/mcp-tool-contract.md`**
+
+**Workflow after audit passes:** **`.ai/workflow/module-development.md`**
+
+Do not rely on IDE-specific rule files; **`.ai/rules/`** is the authority. New rules go under `.ai/rules/` and are referenced here if needed.
+
