@@ -91,7 +91,7 @@ function mediaToPlaylistItem(media: QishuiMedia): PlaylistItem | null {
   if (media.type === 'track') {
     const track = media.entity?.track
     const title = track?.name?.trim()
-    if (!title) {
+    if (!track || !title) {
       return null
     }
 
@@ -104,7 +104,7 @@ function mediaToPlaylistItem(media: QishuiMedia): PlaylistItem | null {
   if (media.type === 'video') {
     const video = media.entity?.video
     const title = video?.title?.trim()
-    if (!title) {
+    if (!video || !title) {
       return null
     }
 
