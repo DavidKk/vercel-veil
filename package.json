@@ -30,7 +30,7 @@
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-tooltip": "^1.4.1",
     "@vercel/analytics": "^1.5.0",
-    "@vercel/speed-insights": "^1.2.0",
+    "@vercel/speed-insights": "^2.1.0",
     "ahooks": "^3.11.0",
     "cookie": "^1.0.2",
     "css-select": "^6.0.0",
